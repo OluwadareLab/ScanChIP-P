@@ -148,8 +148,17 @@ def create_new_data(matrix):
 #          DBScan Clustering          #
 #######################################
 
-# Calculate ESP with k-distance
 def k_distance(matrix, k):
+    """
+    Calculate ESP with k-distance
+
+    Args:
+        matrix (_type_): _description_
+        k (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     n = matrix.shape[0]
     distances = np.zeros(n)
 
@@ -177,8 +186,10 @@ def min_pnts(min_tad_size, resolution):
 #            Generate TADs            #
 #######################################
 
-# Generate TADs based on how many bins are required for the minimum size of a TAD
 def generate_tad():
+    """
+    Generate TADs based on how many bins are required for the minimum size of a TAD
+    """
     return
 
 #######################################
@@ -238,16 +249,22 @@ def modified_jaccard_index(tad_1, tad_2):
     return jaccard_index
 
 
-# Length of TADs
 def length_quality():
+    """
+    Find the quality of the TAD predictions based on length of the TADs
+    """
     return
 
-# Number of TADs
 def amount_identified_quality():
+    """
+    Find the quality of the TAD predictions based on the number of identified TAD's
+    """
     return
 
-# Intra- and inter- Cluster (TAD) similarity
 def interaction_quality():
+    """
+    Intra- and inter- Cluster (TAD) similarity
+    """
     return
 
 #######################################
