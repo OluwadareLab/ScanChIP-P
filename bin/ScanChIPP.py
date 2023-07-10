@@ -11,25 +11,17 @@ import os
 import matplotlib.pyplot as plt
 from knee import KneeLocator
 
+# What arguments should I have for the parser
+
 def main():
     # read HP contact matrix
     # hp_matrix_file = f"../examples/hp_matrix.txt" #use parser for this?
-    # real_data = read_file(hp_matrix_file, "/t")
-    args_length = len(args)
-    inputfilename = args[0]
-    Resolution = int(args[1])
-
-    if args_length == 2:
-        pass
-    elif args_length == 3:
-        window = args.window
-    elif args_length == 4:
-        window = int(args[2])
-        min_TAD_size = int(args[3])
-    elif args_length == 5:
-        window = int(args[2])
-        min_TAD_size = int(args[3])
-        max_TAD_size = int(args[4])
+    real_data = read_file(hp_matrix_file, "/t")
+    inputfilename = args.input
+    Resolution = args.binsize
+    window = int(args.window)
+    min_TAD_size = args.min_tad_size
+    max_TAD_size = args.max_tad_size
     # Split inputfilename and extract the file name
     tmp = inputfilename.split("[/\\.\\\\ ]")
     if "." in inputfilename:
@@ -133,57 +125,126 @@ def k_distance(matrix, k):
     n = matrix.shape[0]
     distances = np.zeros(n)
 
-    for i in range(n):
+    for i in range(0, n - 1):
         row = matrix[i]
         row_sorted = np.sort(row)
         distances[i] = row_sorted[k]
 
     return distances
 
-# Calculate min_points (min tad size / bin resolution)
 def min_pnts(min_tad_size, resolution):
+    """
+    Calculate min_points ~or~ min_bins (min tad size / bin resolution)
+
+    Args:
+        min_tad_size (_type_): Minimum size of a TAD default=120k
+        resolution (_type_): Binsize default=40kb
+
+    Returns:
+        int: returns the amout of bins required to be considered a TAD
+    """
     return min_tad_size // resolution
 
 #######################################
 #            Generate TADs            #
 #######################################
 
+# Generate TADs based on how many bins are required for the minimum size of a TAD
+def generate_tad():
+    return
 
 #######################################
 #        Evaluate TAD Quality         #
 #######################################
 
+def measure_of_concordance(tad_1, tad_2):
+    """
+    Computes the Measure of Concordance (MoC) between two sets of TAD regions.
+
+    Parameters:
+    tad_1 (list): The first set of TAD regions.
+    tad_2 (list): The second set of TAD regions.
+
+    Returns:
+    float: The Measure of Concordance (MoC) between A and B.
+    """
+    n_tad_1 = len(tad_1)
+    n_tad_2 = len(tad_2)
+
+    sum_term = 0
+
+    for i in range(n_tad_1):
+        for j in range(n_tad_2):
+            common_bins = len(set(tad_1[i]) & set(B[j]))
+            sum_term += (common_bins ** 2) / (len(tad_1[i]) * len(tad_2[j]) - 1)
+
+    moc = (1 / (n_tad_1 * n_tad_2 - 1)) * sum_term
+    return moc
+
+
+def modified_jaccard_index(tad_1, tad_2):
+    """
+    Computes the modified Jaccard's index between two sets of TAD boundaries.
+
+    Parameters:
+    tad_1 (set): The first set of TAD boundaries.
+    tad_2 (set): The second set of TAD boundaries.
+
+    Returns:
+    float: The modified Jaccard's index between A and B.
+    """
+    intersecting_set = set()
+    double_counted_boundaries = set()
+
+    for boundary in tad_1:
+        for offset in range(-1, 2):
+            shifted_boundary = boundary + offset
+            if shifted_boundary in tad_2:
+                if shifted_boundary not in double_counted_boundaries:
+                    intersecting_set.add(shifted_boundary)
+                    double_counted_boundaries.add(shifted_boundary)
+
+    union_size = len(tad_1) + len(tad_2) - len(intersecting_set)
+    jaccard_index = len(intersecting_set) / union_size if union_size != 0 else 0
+
+    return jaccard_index
+
+
+# Length of TADs
+def length_quality():
+    return
+
+# Number of TADs
+def amount_identified_quality():
+    return
+
+# Intra- and inter- Cluster (TAD) similarity
+def interaction_quality():
+    return
 
 #######################################
 #            Set Up Parser            #
 #######################################
 def setup_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--indir', help='input directory containing bedpe files', required=True)
-    parser.add_argument('-o', '--outdir', help='output directory', required=True)
-    parser.add_argument('-p', '--prefix', help='name of the dataset; should be the same prefix that input bedpe files start with')
-    parser.add_argument('-C', '--chip', help='filepath to the ChIP peaks', required=True)
-    parser.add_argument('-c', '--chromosomes', help='A comma-separated list of chromosomes', required=True)
-    parser.add_argument('-f', '--features', help='path of the file containing genomic features (mappability, gccontent, effective length)', required=True)
-    parser.add_argument('-x', '--filter', help='None" or path to the bed file containing regions to be filtered', default='None', required=False)
+    parser.add_argument('-i', '--input', help='input contact matrix files', required=True)
+    parser.add_argument('-w', '--window', help='window', required=True)
+    parser.add_argument('-m', '--minsize', help='minimum size of a TAD', default=120000, type=int)
+    # parser.add_argument('-M', '--maxsize', help='maximim size of a TAD', type=int)
     parser.add_argument('-b', '--binsize', help='bin size, default = 40000', default=40000, type=int)
-    parser.add_argument('-u', '--upperlimit', help='upper limit for distance between bins, default = 2000000', default=2000000, type=int)
+    
+    # parser.add_argument('-c', '--chromosomes', help='A comma-separated list of chromosomes', required=True)
+    # parser.add_argument('-f', '--features', help='path of the file containing genomic features (mappability, gccontent, effective length)', required=True)
+    # parser.add_argument('-x', '--filter', help='None" or path to the bed file containing regions to be filtered', default='None', required=False)
+    
+    # parser.add_argument('-u', '--upperlimit', help='upper limit for distance between bins, default = 2000000', default=2000000, type=int)
     return parser
 
 def parse_arguments(parser):
     args = parser.parse_args()
-    print('Reading input from directory:', args.indir)
-    print('Output will be written to:', args.outdir)
-    print('Genomic features file specified:', args.features)
-    chromosomes = ['chr' + chrom for chrom in args.chromosomes.split(',')]
-    args.chroms = chromosomes
-    print('Analyzing')
-    print('   ', args.chroms)
-    if args.filter == 'None':
-        print('No filter region specified')
-    else:
-        print('Filtered bins will be read from:', args.filter)
+    print('Contact matrix specified:', args.input)
+    print('Creating window:', args.window)
     print('Binsize:', args.binsize)
-    print('Prefix:', args.prefix)
-    print('Upperlimit:', args.upperlimit)
+    print('Minimum TAD size', args.minsize)
+    print('Maximum TAD size', args.maxsize)
     return args
