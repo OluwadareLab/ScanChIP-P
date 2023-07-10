@@ -99,22 +99,35 @@ def read_file(filename, sep):
 #          Feature Extraction         #
 #######################################
 
-# Find zero rows from data
-def find_zero_rows(data):
+def find_zero_rows(matrix):
+    """
+    Find zero rows from data
+
+    Args:
+        matrix (np matrix): Contact Matrix
+    """
     global zero_rows
     zero_rows = []
-    num_dimensions = len(data)
+    num_dimensions = len(matrix)
     for dim in range(num_dimensions):
         count = 0
-        for value in data[dim]:
+        for value in matrix[dim]:
             if value == 0:
                 count += 1
-        if count == len(data[dim]):
+        if count == len(matrix[dim]):
             zero_rows.append(dim)
             
-# Create a window for feature extraction to exclude a lot of the noise
-def create_new_data(mat):
-    find_zero_rows(mat)
+def create_new_data(matrix):
+    """
+    Create a window for feature extraction to exclude a lot of the noise
+
+    Args:
+        matrix (np matrix): Contact Matrix
+
+    Returns:
+        _type_: _description_
+    """
+    find_zero_rows(matrix)
     print("The number of Zero Rows =", len(zero_rows))
     nrows = nRegion - len(zero_rows)
     ncols = 2 * nRegion
@@ -124,8 +137,8 @@ def create_new_data(mat):
         if diag in zero_rows:
             continue
         else:
-            mat.rowdata(mat, diag, ncols)
-            mat.coldata(mat, diag, ncols)
+            matrix.rowdata(matrix, diag, ncols)
+            matrix.coldata(matrix, diag, ncols)
             feature.append(list[:ncols])
             index += 1
             list.clear()
@@ -245,14 +258,7 @@ def setup_parser():
     parser.add_argument('-i', '--input', help='input contact matrix files', required=True)
     parser.add_argument('-w', '--window', help='window', required=True)
     parser.add_argument('-m', '--minsize', help='minimum size of a TAD', default=120000, type=int)
-    # parser.add_argument('-M', '--maxsize', help='maximim size of a TAD', type=int)
     parser.add_argument('-b', '--binsize', help='bin size, default = 40000', default=40000, type=int)
-    
-    # parser.add_argument('-c', '--chromosomes', help='A comma-separated list of chromosomes', required=True)
-    # parser.add_argument('-f', '--features', help='path of the file containing genomic features (mappability, gccontent, effective length)', required=True)
-    # parser.add_argument('-x', '--filter', help='None" or path to the bed file containing regions to be filtered', default='None', required=False)
-    
-    # parser.add_argument('-u', '--upperlimit', help='upper limit for distance between bins, default = 2000000', default=2000000, type=int)
     return parser
 
 def parse_arguments(parser):
