@@ -14,17 +14,18 @@ from knee import KneeLocator
 # What arguments should I have for the parser
 
 def main():
+    """
+    Read inputs and creates output TADs
+    """
     # read HP contact matrix
-    # hp_matrix_file = f"../examples/hp_matrix.txt" #use parser for this?
-    real_data = read_file(hp_matrix_file, "/t")
-    inputfilename = args.input
+    real_data = read_file(args.input, "/t")
     Resolution = args.binsize
     window = int(args.window)
     min_TAD_size = args.min_tad_size
     max_TAD_size = args.max_tad_size
     # Split inputfilename and extract the file name
-    tmp = inputfilename.split("[/\\.\\\\ ]")
-    if "." in inputfilename:
+    tmp = args.input.split("[/\\.\\\\ ]")
+    if "." in args.input:
         name = tmp[-2]
     else:
         name = tmp[-1]
@@ -33,7 +34,7 @@ def main():
     Clusterpath = "Clusters/"
     ClusterFolder = os.path.join(Outputpath, Clusterpath)
     TADFolder = os.path.join(Outputpath, "TADs/")
-    fname = inputfilename
+    fname = arg.input
     # create new feature data
     feat = create_new_data(real_data)
     # Create an output folder
@@ -47,7 +48,21 @@ def main():
 #######################################
 #          Read HP Matrix File        #
 #######################################
+
 def read_file(filename, sep):
+    """
+    Read the contact matrix file
+
+    Args:
+        filename (String): Name of the file that needs to be read
+        sep (String): How to seperate
+
+    Raises:
+        e: File not found
+
+    Returns:
+        Matrix: Parsed contact matrix
+    """
     rows = 0
     cols = 0
     try:
@@ -60,20 +75,20 @@ def read_file(filename, sep):
 
         print("Number of row/col =", rows)
 
-        a = [[0.0] * cols for _ in range(rows)]
+        contact_matrix = [[0.0] * cols for _ in range(rows)]
         lines_counter = 0
         with open(filename, 'r') as file:
             for line in file:
                 rowdata = line.rstrip('\n')
                 line = rowdata.split(sep)
                 for k in range(cols):
-                    a[lines_counter][k] = float(line[k])
+                    contact_matrix[lines_counter][k] = float(line[k])
                 lines_counter += 1
 
         global nRegion
         nRegion = rows
 
-        return a
+        return contact_matrix
     except FileNotFoundError as e:
         print("File not found:", filename)
         raise e
