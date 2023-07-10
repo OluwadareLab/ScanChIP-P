@@ -1,6 +1,7 @@
 #######################################
 #              ScanChIP-P             #
 #         By: Ashley Doerfler         #
+#            Date: 07-2023            #
 #######################################
 
 from sklearn.cluster import DBSCAN
@@ -10,8 +11,6 @@ import argparse
 import os
 import matplotlib.pyplot as plt
 from knee import KneeLocator
-
-# What arguments should I have for the parser
 
 def main():
     """
