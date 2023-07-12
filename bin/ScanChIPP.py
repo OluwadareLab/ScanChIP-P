@@ -1,7 +1,6 @@
 #######################################
 #              ScanChIP-P             #
 #         By: Ashley Doerfler         #
-#            Date: 07-2023            #
 #######################################
 
 from sklearn.cluster import DBSCAN
@@ -12,36 +11,21 @@ import os
 import matplotlib.pyplot as plt
 from knee import KneeLocator
 
+# What arguments should I have for the parser
+
 def main():
     """
     Read inputs and creates output TADs
     """
     # read HP contact matrix
     real_data = read_file(args.input, "/t")
-    Resolution = args.binsize
-    window = int(args.window)
-    min_TAD_size = args.min_tad_size
-    max_TAD_size = args.max_tad_size
-    # Split inputfilename and extract the file name
-    tmp = args.input.split("[/\\.\\\\ ]")
-    if "." in args.input:
-        name = tmp[-2]
-    else:
-        name = tmp[-1]
-    # Set output paths
-    Outputpath = "Output_" + name + "/"
-    Clusterpath = "Clusters/"
-    ClusterFolder = os.path.join(Outputpath, Clusterpath)
-    TADFolder = os.path.join(Outputpath, "TADs/")
-    fname = arg.input
-    # create new feature data
-    feat = create_new_data(real_data)
-    # Create an output folder
-    os.makedirs(Outputpath, exist_ok=True)
-    filename = "Readme.txt"
-    file_path = os.path.join(Outputpath, filename)
-    # Initialize log_outputWriter
-    log_outputWriter = open(file_path, 'w')
+    
+    # Create feature data from contact matrix with specified window size
+    feat = create_feature_data(real_data, args.window)
+    # what do the features look like
+    feat.to_csv('features.csv')
+    
+    clusters = DBSCAN(esp=k_distance(feat), min_samples=min_pnts(args.min_tad_size, args.binsize))
         
 
 #######################################
@@ -116,7 +100,7 @@ def find_zero_rows(matrix):
         if count == len(matrix[dim]):
             zero_rows.append(dim)
             
-def create_new_data(matrix):
+def create_feature_data(matrix):
     """
     Create a window for feature extraction to exclude a lot of the noise
 
@@ -166,7 +150,42 @@ def k_distance(matrix, k):
         row_sorted = np.sort(row)
         distances[i] = row_sorted[k]
 
-    return distances
+    elbow = find_elbow(distances)
+    return elbow
+
+def find_elbow(distances):
+    """
+    Find the elbow point in a curve.
+
+    Args:
+        distances (ndarray): Array of distances.
+
+    Returns:
+        int: Index of the elbow point.
+    """
+    n = len(distances)
+    x = np.arange(1, n + 1)  # Indices of the distances
+
+    # Compute the cumulative sum of squared differences
+    cum_sum_sq_diff = np.cumsum((distances - distances.mean())**2)
+
+    # Compute the total sum of squared differences
+    total_sq_diff = cum_sum_sq_diff[-1]
+    
+    # Compute the ratio of explained variance
+    explained_variance = cum_sum_sq_diff / total_sq_diff
+
+    # Find the elbow point
+    elbow_index = np.argmax(explained_variance >= 0.9) + 1
+
+    # Plot the explained variance curve
+    plt.plot(x, explained_variance, marker='o')
+    plt.xlabel('Number of clusters')
+    plt.ylabel('Explained variance')
+    plt.title('Explained Variance Curve')
+    plt.show()
+
+    return elbow_index
 
 def min_pnts(min_tad_size, resolution):
     """
@@ -271,7 +290,7 @@ def interaction_quality():
 #######################################
 def setup_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input', help='input contact matrix files', required=True)
+    parser.add_argument('-i', '--input', help='input contact matrix file', required=True)
     parser.add_argument('-w', '--window', help='window', required=True)
     parser.add_argument('-m', '--minsize', help='minimum size of a TAD', default=120000, type=int)
     parser.add_argument('-b', '--binsize', help='bin size, default = 40000', default=40000, type=int)
