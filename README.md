@@ -9,7 +9,7 @@ ScanChIP-P implements DBSCAN, a cluster machine learning algorithm to identify c
 Normalized data was collected from HPTAD and converted into a contact matrix in .hic format
 HPTAD Repository: https://github.com/yunliUNC/HPTAD/tree/main
 
-example/hp_matrix.txt
+example/hp_matrix.txt // this data is currently just for chromosome 19
 
 # How to Run
 -i Input Matrix File \
