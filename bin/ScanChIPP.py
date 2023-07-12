@@ -10,70 +10,33 @@ import argparse
 import os
 import matplotlib.pyplot as plt
 
+# What arguments should I have for the parser
+
 def main():
     """
     Read inputs and creates output TADs
     """
     # read HP contact matrix
-    data = read_file(args.input, "/t")
+    
+    # Setup parser
+    parser = setup_parser()
+    args = parse_arguments(parser)
+    
+    print("Read data")
+    data = pd.read_csv(args.input, sep='\t')
+    # data = read_file(args.input, "\t")
     
     # Create feature data from contact matrix with specified window size
+    print("Create features")
     feat = create_feature_data(data, args.window)
     # what do the features look like
     feat.to_csv('features.csv')
+    print(feat)
     
+    print("Make clusters")
     clusters = DBSCAN(esp=k_distance(feat), min_samples=min_pnts(args.min_tad_size, args.binsize))
-        
-
-#######################################
-#          Read HP Matrix File        #
-#######################################
-
-def read_file(filename, sep):
-    """
-    Read the contact matrix file
-
-    Args:
-        filename (String): Name of the file that needs to be read
-        sep (String): How to seperate
-
-    Raises:
-        e: File not found
-
-    Returns:
-        Matrix: Parsed contact matrix
-    """
-    rows = 0
-    cols = 0
-    try:
-        with open(filename, 'r') as file:
-            for line in file:
-                rowdata = line.rstrip('\n')
-                line = rowdata.split(sep)
-                rows += 1
-                cols = len(line)
-
-        print("Number of row/col =", rows)
-
-        contact_matrix = [[0.0] * cols for _ in range(rows)]
-        lines_counter = 0
-        with open(filename, 'r') as file:
-            for line in file:
-                rowdata = line.rstrip('\n')
-                line = rowdata.split(sep)
-                for k in range(cols):
-                    contact_matrix[lines_counter][k] = float(line[k])
-                lines_counter += 1
-
-        global nRegion
-        nRegion = rows
-
-        return contact_matrix
-    except FileNotFoundError as e:
-        print("File not found:", filename)
-        raise e
-
-    
+    clusters.to_csv('clusters.csv')
+    print(clusters)
 
 #######################################
 #          Feature Extraction         #
@@ -304,7 +267,6 @@ def parse_arguments(parser):
     print('Creating window:', args.window)
     print('Binsize:', args.binsize)
     print('Minimum TAD size', args.minsize)
-    print('Maximum TAD size', args.maxsize)
     return args
 
 main()
