@@ -306,3 +306,5 @@ def parse_arguments(parser):
     print('Minimum TAD size', args.minsize)
     print('Maximum TAD size', args.maxsize)
     return args
+
+main()
