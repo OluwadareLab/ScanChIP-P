@@ -30,13 +30,12 @@ def main():
     print("Create features")
     feat = create_feature_data(data, args.window)
     # what do the features look like
-    feat.to_csv('features.csv')
     print(feat)
     
-    print("Make clusters")
-    clusters = DBSCAN(esp=k_distance(feat), min_samples=min_pnts(args.min_tad_size, args.binsize))
-    clusters.to_csv('clusters.csv')
-    print(clusters)
+    # print("Make clusters")
+    # clusters = DBSCAN(esp=k_distance(feat), min_samples=min_pnts(args.min_tad_size, args.binsize)).fit(feat)
+    # clusters.to_csv('clusters.csv')
+    # print(clusters)
 
 #######################################
 #          Feature Extraction         #
@@ -53,23 +52,37 @@ def create_feature_data(matrix, window):
     Returns:
         _type_: _description_
     """
-    find_zero_rows(matrix)
+    zero_rows = find_zero_rows(matrix)
     print("The number of Zero Rows =", len(zero_rows))
-    nrows = nRegion - len(zero_rows)
+    
+    size_Zero = len(zero_rows)
+    nRegion = matrix.shape[0]
+    nrows = nRegion - size_Zero
     ncols = 2 * nRegion
-    features = []
+    Feature = np.zeros((nrows, ncols))
     index = 0
-    for diag in range(nRegion):
-        if diag in zero_rows:
+    
+    for i in range(0, nRegion - 1):
+        if i in zero_rows:
             continue
         else:
-            # create window
-            matrix.rowdata(matrix, diag, ncols)
-            matrix.coldata(matrix, diag, ncols)
-            features.append(list[:ncols])
+            # list = []
+            # for j in range(0, nRegion - 1):
+            #     list.append(matrix[i][j])
+            # for j in range(0, nRegion - 1):
+            #     list.append(matrix[j][i])
+                
+            # for col_d in range(ncols):
+            #     Feature[index][col_d] = list[col_d]
+            row_values = matrix.iloc[i, :].to_numpy()
+            column_values = matrix.iloc[:, i].to_numpy()
+
+            list_values = np.concatenate((row_values, column_values))
+            Feature[index, :] = list_values
+            
             index += 1
-            list.clear()
-    return features
+            
+    return Feature
 
 def find_zero_rows(matrix):
     """
@@ -78,16 +91,22 @@ def find_zero_rows(matrix):
     Args:
         matrix (np matrix): Contact Matrix
     """
-    global zero_rows
+    # zero_rows = []
+    # row_sum = 0
+    # for i in range(len(matrix)):
+    #     for j in range (0, len(matrix) - 1):
+    #         row_sum += matrix[i][j]
+    #     if row_sum == 0:
+    #         zero_rows.append(i)
+    # return zero_rows
     zero_rows = []
-    num_dimensions = len(matrix)
+    num_dimensions = matrix.shape[0]
+
     for dim in range(num_dimensions):
-        count = 0
-        for value in matrix[dim]:
-            if value == 0:
-                count += 1
-        if count == len(matrix[dim]):
+        row_sum = np.sum(matrix.iloc[dim])
+        if row_sum == 0:
             zero_rows.append(dim)
+    return zero_rows
             
 def create_window():
     return
@@ -96,7 +115,7 @@ def create_window():
 #          DBScan Clustering          #
 #######################################
 
-def k_distance(matrix, k):
+def k_distance(matrix):
     """
     Calculate ESP with k-distance
 
@@ -108,12 +127,13 @@ def k_distance(matrix, k):
         _type_: _description_
     """
     n = matrix.shape[0]
-    distances = np.zeros(n)
+    distances = np.zeros((n, n-1))
 
-    for i in range(0, n - 1):
+    for i in range(n):
         row = matrix[i]
         row_sorted = np.sort(row)
-        distances[i] = row_sorted[k]
+        for k in range(1, n):
+            distances[i, k-1] = row_sorted[k]
 
     elbow = find_elbow(distances)
     return elbow
