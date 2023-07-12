@@ -80,6 +80,35 @@ def read_file(filename, sep):
 #######################################
 #          Feature Extraction         #
 #######################################
+            
+def create_feature_data(matrix, window):
+    """
+    Create a window for feature extraction to exclude a lot of the noise
+
+    Args:
+        matrix (np matrix): Contact Matrix
+        window (float): Portion of the data to focus on
+
+    Returns:
+        _type_: _description_
+    """
+    find_zero_rows(matrix)
+    print("The number of Zero Rows =", len(zero_rows))
+    nrows = nRegion - len(zero_rows)
+    ncols = 2 * nRegion
+    features = []
+    index = 0
+    for diag in range(nRegion):
+        if diag in zero_rows:
+            continue
+        else:
+            # create window
+            matrix.rowdata(matrix, diag, ncols)
+            matrix.coldata(matrix, diag, ncols)
+            features.append(list[:ncols])
+            index += 1
+            list.clear()
+    return features
 
 def find_zero_rows(matrix):
     """
@@ -99,32 +128,8 @@ def find_zero_rows(matrix):
         if count == len(matrix[dim]):
             zero_rows.append(dim)
             
-def create_feature_data(matrix):
-    """
-    Create a window for feature extraction to exclude a lot of the noise
-
-    Args:
-        matrix (np matrix): Contact Matrix
-
-    Returns:
-        _type_: _description_
-    """
-    find_zero_rows(matrix)
-    print("The number of Zero Rows =", len(zero_rows))
-    nrows = nRegion - len(zero_rows)
-    ncols = 2 * nRegion
-    feature = []
-    index = 0
-    for diag in range(nRegion):
-        if diag in zero_rows:
-            continue
-        else:
-            matrix.rowdata(matrix, diag, ncols)
-            matrix.coldata(matrix, diag, ncols)
-            feature.append(list[:ncols])
-            index += 1
-            list.clear()
-    return feature
+def create_window():
+    return
 
 #######################################
 #          DBScan Clustering          #
