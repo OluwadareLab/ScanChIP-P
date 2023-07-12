@@ -9,7 +9,6 @@ import numpy as np
 import argparse
 import os
 import matplotlib.pyplot as plt
-from knee import KneeLocator
 
 # What arguments should I have for the parser
 
