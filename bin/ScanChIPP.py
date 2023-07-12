@@ -17,10 +17,10 @@ def main():
     Read inputs and creates output TADs
     """
     # read HP contact matrix
-    real_data = read_file(args.input, "/t")
+    data = read_file(args.input, "/t")
     
     # Create feature data from contact matrix with specified window size
-    feat = create_feature_data(real_data, args.window)
+    feat = create_feature_data(data, args.window)
     # what do the features look like
     feat.to_csv('features.csv')
     
