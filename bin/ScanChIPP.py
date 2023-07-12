@@ -16,12 +16,11 @@ def main():
     """
     Read inputs and creates output TADs
     """
-    # read HP contact matrix
-    
     # Setup parser
     parser = setup_parser()
     args = parse_arguments(parser)
-    
+
+    # read HP contact matrix
     print("Read data")
     data = pd.read_csv(args.input, sep='\t')
     # data = read_file(args.input, "\t")
