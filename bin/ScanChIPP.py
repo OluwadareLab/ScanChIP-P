@@ -66,14 +66,6 @@ def create_feature_data(matrix, window):
         if i in zero_rows:
             continue
         else:
-            # list = []
-            # for j in range(0, nRegion - 1):
-            #     list.append(matrix[i][j])
-            # for j in range(0, nRegion - 1):
-            #     list.append(matrix[j][i])
-                
-            # for col_d in range(ncols):
-            #     Feature[index][col_d] = list[col_d]
             row_values = matrix.iloc[i, :].to_numpy()
             column_values = matrix.iloc[:, i].to_numpy()
 
@@ -91,14 +83,6 @@ def find_zero_rows(matrix):
     Args:
         matrix (np matrix): Contact Matrix
     """
-    # zero_rows = []
-    # row_sum = 0
-    # for i in range(len(matrix)):
-    #     for j in range (0, len(matrix) - 1):
-    #         row_sum += matrix[i][j]
-    #     if row_sum == 0:
-    #         zero_rows.append(i)
-    # return zero_rows
     zero_rows = []
     num_dimensions = matrix.shape[0]
 
