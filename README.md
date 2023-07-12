@@ -23,4 +23,4 @@ python3 ScanChIPP.py \
 -m 120000 \
 -b 40000
 
-python3 ScanChIPP.py -i ../examples/hp_matrix.txt -w .5 -m 120000 -b 40000
+python3 ScanChIPP.py -i ../example/hp_matrix.txt -w .5 -m 120000 -b 40000
