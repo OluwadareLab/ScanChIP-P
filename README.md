@@ -9,7 +9,7 @@ ScanChIP-P implements DBSCAN, a cluster machine learning algorithm to identify c
 -i Input Matrix File \
 -w Window Size (what portion of the data) \
 -m Minimum TAD Size \
--b Bin Size \
+-b Bin Size 
 
 python3 ScanChIPP.py \
 -i  ../examples/hp_matrix.txt\
