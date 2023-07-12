@@ -10,8 +10,6 @@ import argparse
 import os
 import matplotlib.pyplot as plt
 
-# What arguments should I have for the parser
-
 def main():
     """
     Read inputs and creates output TADs
