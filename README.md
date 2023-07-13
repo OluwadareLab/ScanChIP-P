@@ -13,14 +13,14 @@ example/hp_matrix.txt // this data is currently just for chromosome 19
 
 # How to Run
 -i Input Matrix File \
--w Window Size (what portion of the data) \
+-w Window Size (How many times do you want to split up the data) \
 -m Minimum TAD Size \
 -b Bin Size 
 
 python3 ScanChIPP.py \
 -i  ../example/hp_matrix.txt\
--w .5 \
+-w 2 \
 -m 120000 \
 -b 40000
 
-python3 ScanChIPP.py -i ../example/hp_matrix.txt -w .5 -m 120000 -b 40000
+python3 ScanChIPP.py -i ../example/hp_matrix.txt -w 2 -m 120000 -b 40000
