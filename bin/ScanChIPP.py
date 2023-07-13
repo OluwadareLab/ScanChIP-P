@@ -16,25 +16,25 @@ def main():
     """
     Read inputs and creates output TADs
     """
+    # read HP contact matrix
+    
     # Setup parser
     parser = setup_parser()
     args = parse_arguments(parser)
-
-    # read HP contact matrix
+    
     print("Read data")
     data = pd.read_csv(args.input, sep='\t')
-    # data = read_file(args.input, "\t")
+    print(data)
     
     # Create feature data from contact matrix with specified window size
     print("Create features")
-    feat = create_feature_data(data, args.window)
+    features = create_feature_data(data, args.window)
     # what do the features look like
-    print(feat)
+    print(features)
     
-    # print("Make clusters")
-    # clusters = DBSCAN(esp=k_distance(feat), min_samples=min_pnts(args.min_tad_size, args.binsize)).fit(feat)
-    # clusters.to_csv('clusters.csv')
-    # print(clusters)
+    print("Make clusters")
+    clusters = DBSCAN(eps=k_distance(feat), min_samples=min_pnts(args.minsize, args.binsize)).fit(feat)
+    print(clusters.labels_) # just returns DBSCAN(eps=1, min_samples=3) ????
 
 #######################################
 #          Feature Extraction         #
@@ -49,31 +49,27 @@ def create_feature_data(matrix, window):
         window (float): Portion of the data to focus on
 
     Returns:
-        _type_: _description_
+        pandas dataframe: Returns the features
     """
-    zero_rows = find_zero_rows(matrix)
-    print("The number of Zero Rows =", len(zero_rows))
+    row_feature = []
+    col_feature = []
+    features = []
     
-    size_Zero = len(zero_rows)
-    nRegion = matrix.shape[0]
-    nrows = nRegion - size_Zero
-    ncols = 2 * nRegion
-    Feature = np.zeros((nrows, ncols))
-    index = 0
-    
-    for i in range(0, nRegion - 1):
-        if i in zero_rows:
-            continue
+    for i in range(0, len(matrix)):
+        for j in range(i, (len(matrix) * window) + i):
+            row_feature.append(matrix[j,i])
+            col_feature.append(matrix[i,j])
+            
+        # i,j feature
+        feat = row_feature.append(col_feature) 
+        
+        # add to list of features
+        if features[i]:
+            features[i] = feat 
         else:
-            row_values = matrix.iloc[i, :].to_numpy()
-            column_values = matrix.iloc[:, i].to_numpy()
-
-            list_values = np.concatenate((row_values, column_values))
-            Feature[index, :] = list_values
+            features.append([feat])
             
-            index += 1
-            
-    return Feature
+    return features
 
 def find_zero_rows(matrix):
     """
@@ -140,18 +136,26 @@ def find_elbow(distances):
     # Compute the total sum of squared differences
     total_sq_diff = cum_sum_sq_diff[-1]
     
+    # Check if total_sq_diff is zero
+    if total_sq_diff == 0:
+        explained_variance = np.zeros_like(cum_sum_sq_diff)
+    else:
+        # Replace zeros in total_sq_diff with a small nonzero value
+        total_sq_diff = np.where(total_sq_diff == 0, 1e-10, total_sq_diff)
+        # Compute the ratio of explained variance
+        explained_variance = cum_sum_sq_diff / total_sq_diff
     # Compute the ratio of explained variance
     explained_variance = cum_sum_sq_diff / total_sq_diff
 
     # Find the elbow point
     elbow_index = np.argmax(explained_variance >= 0.9) + 1
 
-    # Plot the explained variance curve
-    plt.plot(x, explained_variance, marker='o')
-    plt.xlabel('Number of clusters')
-    plt.ylabel('Explained variance')
-    plt.title('Explained Variance Curve')
-    plt.show()
+    # # Plot the explained variance curve
+    # plt.plot(x, explained_variance, marker='o')
+    # plt.xlabel('Number of clusters')
+    # plt.ylabel('Explained variance')
+    # plt.title('Explained Variance Curve')
+    # plt.show()
 
     return elbow_index
 
@@ -259,7 +263,7 @@ def interaction_quality():
 def setup_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', help='input contact matrix file', required=True)
-    parser.add_argument('-w', '--window', help='window', required=True)
+    parser.add_argument('-w', '--window', help='window', type=int)
     parser.add_argument('-m', '--minsize', help='minimum size of a TAD', default=120000, type=int)
     parser.add_argument('-b', '--binsize', help='bin size, default = 40000', default=40000, type=int)
     return parser
@@ -273,3 +277,4 @@ def parse_arguments(parser):
     return args
 
 main()
+
