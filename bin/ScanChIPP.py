@@ -10,25 +10,24 @@ import argparse
 import os
 import matplotlib.pyplot as plt
 
-# What arguments should I have for the parser
-
 def main():
     """
     Read inputs and creates output TADs
     """
-    # read HP contact matrix
     
     # Setup parser
     parser = setup_parser()
     args = parse_arguments(parser)
     
+    # read HP contact matrix
     print("Read data")
-    data = pd.read_csv(args.input, sep='\t')
-    print(data)
+    data = pd.read_csv(args.input, header=None, sep='\t')
+    data = data.to_numpy()
+    # print(data[1, :])
     
     # Create feature data from contact matrix with specified window size
     print("Create features")
-    features = create_feature_data(data, args.window)
+    features = create_feature_data(data, args.window, args.binsize)
     # what do the features look like
     print(features)
     
@@ -40,7 +39,7 @@ def main():
 #          Feature Extraction         #
 #######################################
             
-def create_feature_data(matrix, window):
+def create_feature_data(matrix, window, binsize):
     """
     Create a window for feature extraction to exclude a lot of the noise
 
@@ -55,13 +54,16 @@ def create_feature_data(matrix, window):
     col_feature = []
     features = []
     
-    for i in range(0, len(matrix)):
-        for j in range(i, (len(matrix) * window) + i):
-            row_feature.append(matrix[j,i])
-            col_feature.append(matrix[i,j])
+    for diag in range(0, len(matrix) - 1):
+        for iter in range(diag, (len(matrix) // 10) + diag): # eventually replace 10 with window for scalability
+            # collect row and column features
+            row_feature.append(matrix[diag, iter])
+            print("row: ", row_feature)
+            col_feature.append(matrix[iter, diag])
+            print("col: ", col_feature)
             
-        # i,j feature
-        feat = row_feature.append(col_feature) 
+        # i,j features, rows then columns
+        feat = row_feature#.append(col_feature) 
         
         # add to list of features
         if features[i]:
@@ -69,7 +71,7 @@ def create_feature_data(matrix, window):
         else:
             features.append([feat])
             
-    return features
+    return #features
 
 def find_zero_rows(matrix):
     """
@@ -277,4 +279,3 @@ def parse_arguments(parser):
     return args
 
 main()
-
