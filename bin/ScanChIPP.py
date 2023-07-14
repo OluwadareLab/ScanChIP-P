@@ -50,24 +50,28 @@ def create_feature_data(matrix, window, binsize):
     Returns:
         pandas dataframe: Returns the features
     """
-    row_feature = []
-    col_feature = []
     features = []
     
     for diag in range(0, len(matrix) - 1):
+        # clear col and row features for next iteration
+        row_feature = []
+        col_feature = []
+        # might have to take out based on feature structure
+
         for iter in range(diag, (len(matrix) // 10) + diag): # eventually replace 10 with window for scalability
             # collect row and column features
             row_feature.append(matrix[diag, iter])
             print("row: ", row_feature)
             col_feature.append(matrix[iter, diag])
             print("col: ", col_feature)
-            
+        
+        # might have to take out of for loop depending on feature stucture
         # i,j features, rows then columns
-        feat = row_feature#.append(col_feature) 
+        feat = row_feature.append(col_feature) 
         
         # add to list of features
-        if features[i]:
-            features[i] = feat 
+        if features[diag]:
+            features[diag] = feat 
         else:
             features.append([feat])
             
