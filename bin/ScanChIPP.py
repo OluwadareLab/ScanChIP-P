@@ -39,7 +39,7 @@ def main():
 #          Feature Extraction         #
 #######################################
             
-def create_feature_data(matrix, window, binsize):
+def create_feature_data(matrix, window_proportion, binsize):
     """
     Create a window for feature extraction to exclude a lot of the noise
 
@@ -56,45 +56,34 @@ def create_feature_data(matrix, window, binsize):
         # clear col and row features for next iteration
         row_feature = []
         col_feature = []
+        window = (len(matrix) // 10) + diag # eventually replace 10 with window for scalability
+        
         # might have to take out based on feature structure
-
-        for iter in range(diag, (len(matrix) // 10) + diag): # eventually replace 10 with window for scalability
+        # limits window to the end of the 2D array
+        if (window > len(matrix)):
+            window = len(matrix)
+            
+        for iter in range(diag, window): 
             # collect row and column features
             row_feature.append(matrix[diag, iter])
-            print("row: ", row_feature)
+            # print("row: ", row_feature)
             col_feature.append(matrix[iter, diag])
-            print("col: ", col_feature)
+            # print("col: ", col_feature)
         
         # might have to take out of for loop depending on feature stucture
         # i,j features, rows then columns
         feat = row_feature.append(col_feature) 
         
+        # do I even need the if/else, or can I just do features[diag] = feat
+        # I will need it if I take it out of the for loop, but 0 instead of diag
         # add to list of features
         if features[diag]:
             features[diag] = feat 
         else:
             features.append([feat])
+    print(features)
             
-    return #features
-
-def find_zero_rows(matrix):
-    """
-    Find zero rows from data
-
-    Args:
-        matrix (np matrix): Contact Matrix
-    """
-    zero_rows = []
-    num_dimensions = matrix.shape[0]
-
-    for dim in range(num_dimensions):
-        row_sum = np.sum(matrix.iloc[dim])
-        if row_sum == 0:
-            zero_rows.append(dim)
-    return zero_rows
-            
-def create_window():
-    return
+    return features
 
 #######################################
 #          DBScan Clustering          #
@@ -283,3 +272,4 @@ def parse_arguments(parser):
     return args
 
 main()
+
