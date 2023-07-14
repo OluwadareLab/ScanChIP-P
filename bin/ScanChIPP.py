@@ -32,8 +32,8 @@ def main():
     print(features)
     
     print("Make clusters")
-    clusters = DBSCAN(eps=k_distance(feat), min_samples=min_pnts(args.minsize, args.binsize)).fit(feat)
-    print(clusters.labels_) # just returns DBSCAN(eps=1, min_samples=3) ????
+    clusters = DBSCAN(eps=k_distance(features), min_samples=min_pnts(args.minsize, args.binsize)).fit(features)
+    print(clusters.labels_)
 
 #######################################
 #          Feature Extraction         #
