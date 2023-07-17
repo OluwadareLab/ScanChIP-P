@@ -35,7 +35,7 @@ def main():
     # print(clusters.labels_) # just returns DBSCAN(eps=1, min_samples=3) ????
 
 #######################################
-#          Feature Extraction         #
+#    L-Shaped Feature Extraction      #
 #######################################
             
 def create_feature_data(matrix, window_proportion):
