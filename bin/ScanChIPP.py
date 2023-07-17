@@ -25,20 +25,21 @@ def main():
     data = data.to_numpy()
     # print(data[1, :])
     
+    window_length = len(data) // args.windowproportion
     # Create feature data from contact matrix with specified window size
     print("Create features")
-    features = create_feature_data(data, args.windowproportion, args.binsize)
-    # what do the features look like
+    features = create_feature_data(data, window_length)
     
-    # print("Make clusters")
-    # clusters = DBSCAN(eps=k_distance(features), min_samples=min_pnts(args.minsize, args.binsize)).fit(features)
-    # print(clusters.labels_) # just returns DBSCAN(eps=1, min_samples=3) ????
+    # Cluster TADs
+    print("Make clusters")
+    clusters = DBSCAN(eps=k_distance(features, window_length), min_samples=min_pnts(args.minsize, args.binsize)).fit(data)
+    print(clusters.labels_)
 
 #######################################
-#    L-Shaped Feature Extraction      #
+#          Feature Extraction         #
 #######################################
             
-def create_feature_data(matrix, window_proportion):
+def create_feature_data(matrix, window_length):
     """
     Create a window for feature extraction to exclude a lot of the noise
 
@@ -54,13 +55,13 @@ def create_feature_data(matrix, window_proportion):
     for diag in range(0, len(matrix)):
 
         # Finds end position of window
-        window = (len(matrix) // window_proportion) + diag
+        window = window_length + diag
         
-        # Collect row and column features
+    # Collect row and column features
 
         # If window is out of bounds
         if (window > len(matrix)):
-            window_length = len(matrix) // window_proportion
+            
             # row
             for j in range(0, window_length):
                 features.append(matrix[diag, diag - j])
@@ -74,8 +75,6 @@ def create_feature_data(matrix, window_proportion):
             for i in range(diag, window):
                 # col
                 features.append(matrix[i, diag])
-
-    print(features, "length: ", len(features)) 
             
     return features
 
@@ -83,70 +82,55 @@ def create_feature_data(matrix, window_proportion):
 #          DBScan Clustering          #
 #######################################
 
-def k_distance(matrix):
+def k_distance(features, window_length):
     """
-    Calculate ESP with k-distance
+    Calculate the k-distance for each window in the given features.
 
     Args:
-        matrix (_type_): _description_
-        k (_type_): _description_
+        features (array): Features obtained from create_feature_data function.
+        k (int): The desired distance (k) to calculate.
 
     Returns:
-        _type_: _description_
+        array: The k-distances for each window.
     """
-    n = len(matrix)
-    distances = np.zeros((n, n-1))
+    num_windows = len(features) // (2 * window_length)
+    k_distances = []
 
-    for i in range(n):
-        row = matrix[i]
-        row_sorted = np.sort(row)
-        for k in range(1, n):
-            distances[i, k-1] = row_sorted[k]
-
-    elbow = find_elbow(distances)
-    return elbow
-
-def find_elbow(distances):
-    """
-    Find the elbow point in a curve.
-
-    Args:
-        distances (ndarray): Array of distances.
-
-    Returns:
-        int: Index of the elbow point.
-    """
-    n = len(distances)
-    x = np.arange(1, n + 1)  # Indices of the distances
-
-    # Compute the cumulative sum of squared differences
-    cum_sum_sq_diff = np.cumsum((distances - distances.mean())**2)
-
-    # Compute the total sum of squared differences
-    total_sq_diff = cum_sum_sq_diff[-1]
+    for window_idx in range(num_windows):
+        start_idx = window_idx * 2 * window_length
+        end_idx = start_idx + 2 * window_length
+        window_data = features[start_idx:end_idx]
+        distance = np.linalg.norm(np.array(window_data[:-1]) - np.array(window_data[1:]))
+        k_distances.append(distance)
     
-    # Check if total_sq_diff is zero
-    if total_sq_diff == 0:
-        explained_variance = np.zeros_like(cum_sum_sq_diff)
-    else:
-        # Replace zeros in total_sq_diff with a small nonzero value
-        total_sq_diff = np.where(total_sq_diff == 0, 1e-10, total_sq_diff)
-        # Compute the ratio of explained variance
-        explained_variance = cum_sum_sq_diff / total_sq_diff
-    # Compute the ratio of explained variance
-    explained_variance = cum_sum_sq_diff / total_sq_diff
+    return find_elbow_point(k_distances)
 
-    # Find the elbow point
-    elbow_index = np.argmax(explained_variance >= 0.9) + 1
+def find_elbow_point(k_distances):
+    """
+    Find the elbow point in the k-distances curve using the elbow method.
 
-    # Plot the explained variance curve
-    plt.plot(x, explained_variance, marker='o')
-    plt.xlabel('Number of clusters')
-    plt.ylabel('Explained variance')
-    plt.title('Explained Variance Curve')
+    Args:
+        k_distances (array): The k-distances obtained from the k_distance function.
+
+    Returns:
+        int: The index of the elbow point in the k-distances array.
+    """
+    distortions = []
+    for i in range(1, len(k_distances)):
+        # Calculate the squared distance between each k-distance and its previous one
+        distortion = (k_distances[i] - k_distances[i - 1]) ** 2
+        distortions.append(distortion)
+
+    # Plot the distortions to find the elbow point
+    plt.plot(range(1, len(k_distances)), distortions, marker='o')
+    plt.xlabel('k')
+    plt.ylabel('Distortion')
+    plt.title('Elbow Method for Optimal k')
     plt.show()
 
-    return elbow_index
+    # Find the index of the elbow point where the slope starts to decrease significantly
+    elbow_point_index = distortions.index(max(distortions))
+    return elbow_point_index + 1  # Add 1 to get the actual k value for the elbow point
 
 def min_pnts(min_tad_size, resolution):
     """
@@ -266,4 +250,5 @@ def parse_arguments(parser):
     return args
 
 main()
+
 
