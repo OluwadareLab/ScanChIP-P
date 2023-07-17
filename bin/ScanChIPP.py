@@ -38,7 +38,7 @@ def main():
 #          Feature Extraction         #
 #######################################
             
-def create_feature_data(matrix, window_proportion, binsize):
+def create_feature_data(matrix, window_proportion):
     """
     Create a window for feature extraction to exclude a lot of the noise
 
@@ -47,42 +47,35 @@ def create_feature_data(matrix, window_proportion, binsize):
         window (float): Portion of the data to focus on
 
     Returns:
-        pandas dataframe: Returns the features
+        array: Features, N_features = (2 * window_length) * len(matrix)
     """
     features = []
-    count = 0
+
     for diag in range(0, len(matrix)):
-        # clear col and row features for next iteration
-        row_feature = []
-        col_feature = []
-        feat = ''
-        window = (len(matrix) // window_proportion) + diag # eventually replace 10 with window for scalability
+
+        # Finds end position of window
+        window = (len(matrix) // window_proportion) + diag
         
-        # might have to take out based on feature structure
-        # limits window to the end of the 2D array
+        # Collect row and column features
+
+        # If window is out of bounds
         if (window > len(matrix)):
-            window = len(matrix)
-            
-        for iter in range(diag, window): 
-            # collect row and column features
-            row_feature.append(matrix[diag, iter])
-            # print("row: ", row_feature)
-            col_feature.append(matrix[iter, diag])
-            # print("col: ", col_feature)
-        
-        # might have to take out of for loop depending on feature stucture
-        # i,j features, rows then columns
-        feat += str(row_feature)
-        feat += str(col_feature)
-        print(feat)
-        # do I even need the if/else, or can I just do features[diag] = feat
-        # I will need it if I take it out of the for loop, but 0 instead of diag
-        # add to list of features
-        # if features[1]:
-        #     features[0] = feat 
-        # else:
-    features.append(int[feat])
-    # print(features) 
+            window_length = len(matrix) // window_proportion
+            # row
+            for j in range(0, window_length):
+                features.append(matrix[diag, diag - j])
+            # col
+            for i in range(0, window_length):
+                features.append(matrix[diag - i, diag])
+        else:   
+            for j in range(diag, window): 
+                # rows
+                features.append(matrix[diag, j])
+            for i in range(diag, window):
+                # col
+                features.append(matrix[i, diag])
+
+    print(features, "length: ", len(features)) 
             
     return features
 
