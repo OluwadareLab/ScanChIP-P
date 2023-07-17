@@ -27,13 +27,12 @@ def main():
     
     # Create feature data from contact matrix with specified window size
     print("Create features")
-    features = create_feature_data(data, args.window, args.binsize)
+    features = create_feature_data(data, args.windowproportion, args.binsize)
     # what do the features look like
-    print(features)
     
-    print("Make clusters")
-    clusters = DBSCAN(eps=k_distance(features), min_samples=min_pnts(args.minsize, args.binsize)).fit(features)
-    print(clusters.labels_)
+    # print("Make clusters")
+    # clusters = DBSCAN(eps=k_distance(features), min_samples=min_pnts(args.minsize, args.binsize)).fit(features)
+    # print(clusters.labels_) # just returns DBSCAN(eps=1, min_samples=3) ????
 
 #######################################
 #          Feature Extraction         #
@@ -51,12 +50,13 @@ def create_feature_data(matrix, window_proportion, binsize):
         pandas dataframe: Returns the features
     """
     features = []
-    
-    for diag in range(0, len(matrix) - 1):
+    count = 0
+    for diag in range(0, len(matrix)):
         # clear col and row features for next iteration
         row_feature = []
         col_feature = []
-        window = (len(matrix) // 10) + diag # eventually replace 10 with window for scalability
+        feat = ''
+        window = (len(matrix) // window_proportion) + diag # eventually replace 10 with window for scalability
         
         # might have to take out based on feature structure
         # limits window to the end of the 2D array
@@ -72,16 +72,17 @@ def create_feature_data(matrix, window_proportion, binsize):
         
         # might have to take out of for loop depending on feature stucture
         # i,j features, rows then columns
-        feat = row_feature.append(col_feature) 
-        
+        feat += str(row_feature)
+        feat += str(col_feature)
+        print(feat)
         # do I even need the if/else, or can I just do features[diag] = feat
         # I will need it if I take it out of the for loop, but 0 instead of diag
         # add to list of features
-        if features[diag]:
-            features[diag] = feat 
-        else:
-            features.append([feat])
-    print(features)
+        # if features[1]:
+        #     features[0] = feat 
+        # else:
+    features.append(int[feat])
+    # print(features) 
             
     return features
 
@@ -100,7 +101,7 @@ def k_distance(matrix):
     Returns:
         _type_: _description_
     """
-    n = matrix.shape[0]
+    n = len(matrix)
     distances = np.zeros((n, n-1))
 
     for i in range(n):
@@ -145,12 +146,12 @@ def find_elbow(distances):
     # Find the elbow point
     elbow_index = np.argmax(explained_variance >= 0.9) + 1
 
-    # # Plot the explained variance curve
-    # plt.plot(x, explained_variance, marker='o')
-    # plt.xlabel('Number of clusters')
-    # plt.ylabel('Explained variance')
-    # plt.title('Explained Variance Curve')
-    # plt.show()
+    # Plot the explained variance curve
+    plt.plot(x, explained_variance, marker='o')
+    plt.xlabel('Number of clusters')
+    plt.ylabel('Explained variance')
+    plt.title('Explained Variance Curve')
+    plt.show()
 
     return elbow_index
 
@@ -258,7 +259,7 @@ def interaction_quality():
 def setup_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', help='input contact matrix file', required=True)
-    parser.add_argument('-w', '--window', help='window', type=int)
+    parser.add_argument('-w', '--windowproportion', help='window proportion', type=int)
     parser.add_argument('-m', '--minsize', help='minimum size of a TAD', default=120000, type=int)
     parser.add_argument('-b', '--binsize', help='bin size, default = 40000', default=40000, type=int)
     return parser
@@ -266,7 +267,7 @@ def setup_parser():
 def parse_arguments(parser):
     args = parser.parse_args()
     print('Contact matrix specified:', args.input)
-    print('Creating window:', args.window)
+    print('Creating window:', 1 / args.windowproportion)
     print('Binsize:', args.binsize)
     print('Minimum TAD size', args.minsize)
     return args
