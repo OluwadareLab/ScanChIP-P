@@ -4,6 +4,7 @@
 #######################################
 
 from sklearn.cluster import DBSCAN
+from sklearn.neighbors import NearestNeighbors
 import pandas as pd
 import numpy as np
 import argparse
@@ -19,21 +20,43 @@ def main():
     parser = setup_parser()
     args = parse_arguments(parser)
     
+    min_points = min_pnts(args.minsize, args.binsize)
+    
     # read HP contact matrix
-    print("Read data")
-    data = pd.read_csv(args.input, header=None, sep='\t')
+    print("Read data...")
+    data = pd.read_csv(args.input, header=None, sep='\t') # remove headers as needed
     data = data.to_numpy()
-    # print(data[1, :])
     
     window_length = len(data) // args.windowproportion
     # Create feature data from contact matrix with specified window size
-    print("Create features")
+    print("Create features...")
     features = create_feature_data(data, window_length)
+    # Save features to a file
+    with open('features2.txt', 'w') as outfile:
+        np.savetxt(outfile, features)
     
+    # Use KNN to estimate eps @ the elbow point
+    print("Plotting K-NearestNeighbor...")
+    distances = knn(min_points, features=features)
+    print("Finding elbow point...")
+    eps = find_elbow_point(distances) # 29
+    
+    # eps = 33
+    print("eps", eps)
+
     # Cluster TADs
     print("Make clusters")
-    clusters = DBSCAN(eps=k_distance(features, window_length), min_samples=min_pnts(args.minsize, args.binsize)).fit(data)
+    clusters = DBSCAN(eps=eps, min_samples=min_pnts(args.minsize, args.binsize)).fit(features)
+    
+    # Count the number of different labels
+    labels = clusters.labels_
+    n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+    n_noise_ = list(labels).count(-1)
+
+    print("Estimated number of clusters: %d" % n_clusters_)
+    print("Estimated number of noise points: %d" % n_noise_)
     print(clusters.labels_)
+    #noisy samples = -1
 
 #######################################
 #          Feature Extraction         #
@@ -53,7 +76,7 @@ def create_feature_data(matrix, window_length):
     features = []
 
     for diag in range(0, len(matrix)):
-
+        feat = []
         # Finds end position of window
         window = window_length + diag
         
@@ -61,51 +84,61 @@ def create_feature_data(matrix, window_length):
 
         # If window is out of bounds
         if (window > len(matrix)):
-            
-            # row
-            for j in range(0, window_length):
-                features.append(matrix[diag, diag - j])
-            # col
-            for i in range(0, window_length):
-                features.append(matrix[diag - i, diag])
-        else:   
-            for j in range(diag, window): 
+            for i in range(0, window_length): 
                 # rows
-                features.append(matrix[diag, j])
-            for i in range(diag, window):
-                # col
-                features.append(matrix[i, diag])
-            
+                for j in range(0, window_length):
+                    # col
+                    feat.append(matrix[diag - i, diag - j])
+        else:   
+            for i in range(diag, window): 
+                # rows
+                for j in range(diag, window):
+                    # col
+                    feat.append(matrix[i, j])
+        # Add the feature to the set of features    
+        features.append(feat)
+    
+    features = np.array(features, dtype=float)
+    
     return features
 
 #######################################
 #          DBScan Clustering          #
 #######################################
 
-def k_distance(features, window_length):
-    """
-    Calculate the k-distance for each window in the given features.
+# def k_distance(features, window_length):
+#     """
+#     Calculate the k-distance for each window in the given features.
 
-    Args:
-        features (array): Features obtained from create_feature_data function.
-        k (int): The desired distance (k) to calculate.
+#     Args:
+#         features (array): Features obtained from create_feature_data function.
+#         k (int): The desired distance (k) to calculate.
 
-    Returns:
-        array: The k-distances for each window.
-    """
-    num_windows = len(features) // (2 * window_length)
-    k_distances = []
+#     Returns:
+#         array: The k-distances for each window.
+#     """
+#     num_windows = len(features) // (2 * window_length)
+#     k_distances = []
 
-    for window_idx in range(num_windows):
-        start_idx = window_idx * 2 * window_length
-        end_idx = start_idx + 2 * window_length
-        window_data = features[start_idx:end_idx]
-        distance = np.linalg.norm(np.array(window_data[:-1]) - np.array(window_data[1:]))
-        k_distances.append(distance)
+#     for window_idx in range(num_windows):
+#         start_idx = window_idx * 2 * window_length
+#         end_idx = start_idx + 2 * window_length
+#         window_data = features[start_idx:end_idx]
+#         distance = np.linalg.norm(np.array(window_data[:-1]) - np.array(window_data[1:]))
+#         k_distances.append(distance)
     
-    return find_elbow_point(k_distances)
+#     return find_elbow_point(k_distances)
+def knn(min_pnts, features):
+    neighbors = NearestNeighbors(n_neighbors=min_pnts)
+    neighbors_fit = neighbors.fit(features)
+    distances, indices = neighbors_fit.kneighbors(features)
+    distances = np.sort(distances, axis=0)
+    distances = distances[:,1]
+    plt.plot(distances) 
+    plt.savefig('KNN2.png')
+    return distances
 
-def find_elbow_point(k_distances):
+def find_elbow_point(distances):
     """
     Find the elbow point in the k-distances curve using the elbow method.
 
@@ -116,17 +149,10 @@ def find_elbow_point(k_distances):
         int: The index of the elbow point in the k-distances array.
     """
     distortions = []
-    for i in range(1, len(k_distances)):
+    for i in range(1, len(distances)):
         # Calculate the squared distance between each k-distance and its previous one
-        distortion = (k_distances[i] - k_distances[i - 1]) ** 2
+        distortion = (distances[i] - distances[i - 1]) ** 2
         distortions.append(distortion)
-
-    # Plot the distortions to find the elbow point
-    plt.plot(range(1, len(k_distances)), distortions, marker='o')
-    plt.xlabel('k')
-    plt.ylabel('Distortion')
-    plt.title('Elbow Method for Optimal k')
-    plt.show()
 
     # Find the index of the elbow point where the slope starts to decrease significantly
     elbow_point_index = distortions.index(max(distortions))
@@ -246,7 +272,7 @@ def parse_arguments(parser):
     print('Contact matrix specified:', args.input)
     print('Creating window:', 1 / args.windowproportion)
     print('Binsize:', args.binsize)
-    print('Minimum TAD size', args.minsize)
+    print('Minimum TAD size:', args.minsize)
     return args
 
 main()
