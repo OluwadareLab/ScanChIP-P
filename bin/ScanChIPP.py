@@ -7,9 +7,15 @@ from sklearn.cluster import DBSCAN
 from sklearn.neighbors import NearestNeighbors
 import pandas as pd
 import numpy as np
+# import seaborn as sns
+from sklearn.metrics import silhouette_score
+from sklearn.metrics import davies_bouldin_score
+from sklearn import datasets
+from jqmcvi import base
 import argparse
 import os
 import matplotlib.pyplot as plt
+# %matplotlib inline
 
 def main():
     """
@@ -38,25 +44,47 @@ def main():
     # Use KNN to estimate eps @ the elbow point
     print("Plotting K-NearestNeighbor...")
     distances = knn(min_points, features=features)
+    
     print("Finding elbow point...")
     eps = find_elbow_point(distances) # 29
     
-    # eps = 33
-    print("eps", eps)
-
-    # Cluster TADs
-    print("Make clusters")
-    clusters = DBSCAN(eps=eps, min_samples=min_pnts(args.minsize, args.binsize)).fit(features)
+    print("Find best eps from elbow in range of 10...")
+    min_points = min_pnts(args.minsize, args.binsize)
+    best_clusters = cluster_ranges(eps=eps, features=features)
     
-    # Count the number of different labels
-    labels = clusters.labels_
-    n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
-    n_noise_ = list(labels).count(-1)
+    tads = generate_tad(bin_size=args.binsize, tad_size=args.minsize, clusters=best_clusters)
+    
+    print(tads)
+    # parser = setup_parser()
+    # args = parse_arguments(parser)
+    
+    # min_points = min_pnts(args.minsize, args.binsize)
+    
+    # # read HP contact matrix
+    # print("Read data")
+    # data = pd.read_csv(args.input, header=None, sep='\t')
+    # data = data.to_numpy()
+    # # print(data[1, :])
+    
+    # window_length = len(data) // args.windowproportion
+    # # Create feature data from contact matrix with specified window size
+    # print("Create features")
+    # features = create_feature_data(data, window_length)
+    # #print to file
+    # with open('features.txt', 'w') as outfile:
+    #     np.savetxt(outfile, features)
+    
+    # print("Plotting K-NearestNeighbor...")
+    # distances = knn(min_points, features=features)
+    
+    # print("Finding elbow point...")
+    # eps = find_elbow_point(distances)
+    # print("eps", eps)
 
-    print("Estimated number of clusters: %d" % n_clusters_)
-    print("Estimated number of noise points: %d" % n_noise_)
-    print(clusters.labels_)
-    #noisy samples = -1
+    # # Cluster TADs
+    # print("Make clusters")
+    # clusters = DBSCAN(eps=eps, min_samples=min_pnts(args.minsize, args.binsize)).fit(features)
+    # print(clusters.labels_)
 
 #######################################
 #          Feature Extraction         #
@@ -84,20 +112,25 @@ def create_feature_data(matrix, window_length):
 
         # If window is out of bounds
         if (window > len(matrix)):
-            for i in range(0, window_length): 
-                # rows
-                for j in range(0, window_length):
-                    # col
-                    feat.append(matrix[diag - i, diag - j])
+            
+            # row
+            for j in range(0, window_length):
+                feat.append(matrix[diag, diag - j])
+            # col
+            for i in range(0, window_length):
+                feat.append(matrix[diag - i, diag])
         else:   
-            for i in range(diag, window): 
+            for j in range(diag, window): 
                 # rows
-                for j in range(diag, window):
-                    # col
-                    feat.append(matrix[i, j])
-        # Add the feature to the set of features    
+                feat.append(matrix[diag, j])
+            for i in range(diag, window):
+                # col
+                feat.append(matrix[i, diag])
+                
+        # Add the feature to the set of features            
         features.append(feat)
-    
+        
+    # print(features)
     features = np.array(features, dtype=float)
     
     return features
@@ -128,7 +161,25 @@ def create_feature_data(matrix, window_length):
 #         k_distances.append(distance)
     
 #     return find_elbow_point(k_distances)
+
+# def knn(minsize, binsize, features):
+#     neighbors = NearestNeighbors(n_neighbors=min_pnts(minsize, binsize))
+#     neighbors_fit = neighbors.fit(features)
+#     distances, indices = neighbors_fit.kneighbors(features)
+#     distances = np.sort(distances, axis=0)
+#     distances = distances[:,1]
+#     plt.plot(distances) 
+#     plt.savefig('KNN.png')
 def knn(min_pnts, features):
+    """Calculate K-NearestNeighbor
+
+    Args:
+        min_pnts (_type_): _description_
+        features (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     neighbors = NearestNeighbors(n_neighbors=min_pnts)
     neighbors_fit = neighbors.fit(features)
     distances, indices = neighbors_fit.kneighbors(features)
@@ -138,7 +189,7 @@ def knn(min_pnts, features):
     plt.savefig('KNN2.png')
     return distances
 
-def find_elbow_point(distances):
+def find_elbow_point(k_distances):
     """
     Find the elbow point in the k-distances curve using the elbow method.
 
@@ -149,9 +200,9 @@ def find_elbow_point(distances):
         int: The index of the elbow point in the k-distances array.
     """
     distortions = []
-    for i in range(1, len(distances)):
+    for i in range(1, len(k_distances)):
         # Calculate the squared distance between each k-distance and its previous one
-        distortion = (distances[i] - distances[i - 1]) ** 2
+        distortion = (k_distances[i] - k_distances[i - 1]) ** 2
         distortions.append(distortion)
 
     # Find the index of the elbow point where the slope starts to decrease significantly
@@ -171,15 +222,83 @@ def min_pnts(min_tad_size, resolution):
     """
     return min_tad_size // resolution
 
+def cluster_ranges(eps, features):
+    """Finds clusters for eps ranging from the estimate eps -5 to +5
+
+    Args:
+        eps (int): DBSCAN radius
+        min_points (int): DBSCAN minimum neighbors
+        features (2D array): Dataset for Clustering
+    """
+    best_score_s = 0
+    best_score_dunn = 0
+    best_file = ""
+    best_file_dunn = ""
+    best_cluster = []
+    for e in range(eps-5, eps+5):
+        for min in range(2, 10):
+            # Cluster TADs
+            # print("Clustering at eps=",e , " and min_points=", min, "...")
+            clusters = DBSCAN(eps=e, min_samples=min).fit(features)
+            
+            # Count the number of different labels
+            labels = clusters.labels_
+            n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+            n_noise_ = list(labels).count(-1)
+
+            # print("Estimated number of clusters: %d" % n_clusters_)
+            # print("Estimated number of noise points: %d" % n_noise_)
+            # print(clusters.labels_)
+            
+            if n_clusters_ <= 1:
+                continue
+            
+            filename = f"cluster_eps.{e}._minpoints.{min}..txt"
+            
+            # Silhouette Score
+            s_s = silhouette_score(features, labels)
+            if s_s > best_score_s:
+                best_score_s = s_s
+                best_file = filename
+                best_cluster = clusters.labels_
+            # print("Silhouette Score(n=3): ", s_s)
+            
+            #save to file
+            with open(filename, 'w') as outfile:
+                np.savetxt(outfile, labels)
+                
+    print("The best file was ", best_file, "with a Silhouette Score of ", best_score_s)
+    print(best_cluster)
+    return best_cluster
+
 #######################################
 #            Generate TADs            #
 #######################################
 
-def generate_tad():
+def generate_tad(bin_size, tad_size, clusters):
     """
     Generate TADs based on how many bins are required for the minimum size of a TAD
     """
-    return
+    start = 0
+    count = 0
+    cluster_count = 0
+    tads = []
+    min = min_pnts(min_tad_size=tad_size, resolution=bin_size)
+    
+    for label in clusters:
+        cluster_count += 1
+        count += 1
+        if label == 2:
+            start = count
+        elif label == 1:
+            if (cluster_count) > min:
+                tads.append([start, count])
+                cluster_count = 0
+        
+    if (count - start) > min:
+        tads.append([start, count])
+    
+    return tads
 
 #######################################
 #        Evaluate TAD Quality         #
@@ -272,7 +391,7 @@ def parse_arguments(parser):
     print('Contact matrix specified:', args.input)
     print('Creating window:', 1 / args.windowproportion)
     print('Binsize:', args.binsize)
-    print('Minimum TAD size:', args.minsize)
+    print('Minimum TAD size', args.minsize)
     return args
 
 main()
