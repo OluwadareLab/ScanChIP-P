@@ -287,16 +287,16 @@ def generate_tad(bin_size, tad_size, clusters):
     
     for label in clusters:
         cluster_count += 1
-        count += 1
         if label == 2:
             start = count
         elif label == 1:
             if (cluster_count) > min:
                 tads.append([start, count])
                 cluster_count = 0
+        count += 1
         
     if (count - start) > min:
-        tads.append([start, count])
+        tads.append([start, count - 1])
     
     return tads
 
