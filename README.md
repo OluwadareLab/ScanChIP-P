@@ -27,3 +27,6 @@ python3 ScanChIPP.py -i ../example/hp_matrix.txt -w 2 -m 120000 -b 40000
 
 Practice:
 python3 ScanChIPP.py -i ../example/30x30_data.txt -w 10 -m 120000 -b 40000
+
+Simulated Matrix:
+python3 ScanChIPP.py -i ../simulated_matrix_40_50.txt -w 10 -m 120000 -b 40000
