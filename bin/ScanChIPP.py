@@ -13,6 +13,7 @@ from sklearn.metrics import davies_bouldin_score
 from sklearn import datasets
 from jqmcvi import base
 import argparse
+from sklearn.cluster import KMeans
 import os
 import matplotlib.pyplot as plt
 # %matplotlib inline
@@ -101,29 +102,75 @@ def create_feature_data(matrix, window_length):
     Returns:
         array: Features, N_features = (2 * window_length) * len(matrix)
     """
+    
+    # features = []
+
+    # for diag in range(0, len(matrix)):
+    #     feat = []
+    #     # Finds end position of window
+    #     window = window_length + diag
+        
+    # # Collect row and column features 
+    #     for j in range(0, len(matrix)): 
+    #         # rows
+    #         feat.append(matrix[diag, j])
+    #     for i in range(0, len(matrix)):
+    #          # col
+    #         feat.append(matrix[i, diag])
+                
+    #     # Add the feature to the set of features            
+    #     features.append(feat)
+        
+    # # print(features)
+    # features = np.array(features, dtype=float)
+    
+    # print(features)
+    # return features
+    
     features = []
 
     for diag in range(0, len(matrix)):
         feat = []
         # Finds end position of window
-        window = window_length + diag
+        window = window_length // 2
         
     # Collect row and column features
-
-        # If window is out of bounds
-        if (window > len(matrix)):
-            
-            # row
+        # Top-left corner
+        if (diag - window) < 0:
             for j in range(0, window_length):
-                feat.append(matrix[diag, diag - j])
-            # col
+                # row
+                feat.append(matrix[diag, j])
             for i in range(0, window_length):
-                feat.append(matrix[diag - i, diag])
-        else:   
-            for j in range(diag, window): 
+                # col
+                feat.append(matrix[i, diag])
+        # Bottom-right corner
+        elif (diag + window) > len(matrix):
+            for j in range(len(matrix) - window_length, len(matrix)):
+                feat.append(matrix[diag, j])
+            for i in range(len(matrix) - window_length, len(matrix)):
+                feat.append(matrix[i, diag])
+        # Full cross, and window length is an even nubmer
+        elif window_length % 2 == 0:   
+            for j in range(diag - window, diag + window): 
                 # rows
                 feat.append(matrix[diag, j])
-            for i in range(diag, window):
+            for i in range(diag - window, diag + window):
+                # col
+                feat.append(matrix[i, diag])
+        # Window is not even and in bottom-right corner
+        elif diag > (len(matrix) - window_length):
+            for j in range((diag - window) - 1, diag + window): 
+                # rows
+                feat.append(matrix[diag, j])
+            for i in range((diag - window) - 1, diag + window):
+                # col
+                feat.append(matrix[i, diag])
+        # Window is not even and in top-left corner
+        else:
+            for j in range(diag - window, (diag + window) + 1): 
+                # rows
+                feat.append(matrix[diag, j])
+            for i in range(diag - window, (diag + window) + 1):
                 # col
                 feat.append(matrix[i, diag])
                 
@@ -131,9 +178,39 @@ def create_feature_data(matrix, window_length):
         features.append(feat)
         
     # print(features)
-    features = np.array(features, dtype=float)
-    
+    # features = np.array(features, dtype=float)
+    print(features)
     return features
+    
+    # features = []
+
+    # for diag in range(0, len(matrix)):
+    #     feat = []
+    #     # Finds end position of window
+    #     window = window_length + diag
+        
+    # # Collect row and column features
+
+    #     # If window is out of bounds
+    #     if (window > len(matrix)):
+    #         for i in range(0, window_length): 
+    #             # rows
+    #             for j in range(0, window_length):
+    #                 # col
+    #                 feat.append(matrix[diag - i, diag - j])
+    #     else:   
+    #         for i in range(diag, window): 
+    #             # rows
+    #             for j in range(diag, window):
+    #                 # col
+    #                 feat.append(matrix[i, j])
+    #     # Add the feature to the set of features    
+    #     features.append(feat)
+    
+    # features = np.array(features, dtype=float)
+    
+    # return features
+
 
 #######################################
 #          DBScan Clustering          #
@@ -187,6 +264,7 @@ def knn(min_pnts, features):
     distances = distances[:,1]
     plt.plot(distances) 
     plt.savefig('KNN2.png')
+    
     return distances
 
 def find_elbow_point(k_distances):
@@ -235,12 +313,12 @@ def cluster_ranges(eps, features):
     best_file = ""
     best_file_dunn = ""
     best_cluster = []
-    for e in range(eps-5, eps+5):
+    for e in range(eps-5, eps+30):
         for min in range(2, 10):
             # Cluster TADs
             # print("Clustering at eps=",e , " and min_points=", min, "...")
-            clusters = DBSCAN(eps=e, min_samples=min).fit(features)
-            
+            clusters = DBSCAN(eps=44, min_samples=min).fit(features)
+            # clusters = KMeans(n_clusters=4, random_state=0, n_init="auto").fit(features)
             # Count the number of different labels
             labels = clusters.labels_
             n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
@@ -279,26 +357,8 @@ def generate_tad(bin_size, tad_size, clusters):
     """
     Generate TADs based on how many bins are required for the minimum size of a TAD
     """
-    start = 0
-    count = 0
-    cluster_count = 0
-    tads = []
-    min = min_pnts(min_tad_size=tad_size, resolution=bin_size)
+    return
     
-    for label in clusters:
-        cluster_count += 1
-        if label == 2:
-            start = count
-        elif label == 1:
-            if (cluster_count) > min:
-                tads.append([start, count])
-                cluster_count = 0
-        count += 1
-        
-    if (count - start) > min:
-        tads.append([start, count - 1])
-    
-    return tads
 
 #######################################
 #        Evaluate TAD Quality         #
@@ -395,6 +455,7 @@ def parse_arguments(parser):
     return args
 
 main()
+
 
 
 
