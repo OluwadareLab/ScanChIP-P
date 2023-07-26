@@ -17,15 +17,14 @@ example/hp_matrix.txt // this data is currently just for chromosome 19
 -m Minimum TAD Size \
 -b Bin Size 
 
+HP Matrix:
 python3 ScanChIPP.py \
--i  ../example/hp_matrix.txt\
+-i ../example/hp_matrix.txt \
 -w 2 \
 -m 120000 \
 -b 40000
 
-python3 ScanChIPP.py -i ../example/hp_matrix.txt -w 2 -m 120000 -b 40000
-
-Practice:
+30x30 Matrix (not symmetric):
 python3 ScanChIPP.py -i ../example/30x30_data.txt -w 10 -m 120000 -b 40000
 
 Simulated Matrix:
