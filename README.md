@@ -28,4 +28,4 @@ python3 ScanChIPP.py \
 python3 ScanChIPP.py -i ../example/30x30_data.txt -w 10 -m 120000 -b 40000
 
 Simulated Matrix:
-python3 ScanChIPP.py -i ../example/simulated_matrix_40_50.txt -w 10 -m 120000 -b 40000
+python3 ScanChIPP.py -i ../example/40_TADlike_alpha_50_set0.mat -w 10 -m 120000 -b 40000
