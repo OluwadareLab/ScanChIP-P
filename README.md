@@ -18,6 +18,7 @@ example/hp_matrix.txt // this data is currently just for chromosome 19
 -b Bin Size 
 
 HP Matrix: \
+ 
 python3 ScanChIPP.py \
 -i ../example/hp_matrix.txt \
 -w 2 \
@@ -25,7 +26,9 @@ python3 ScanChIPP.py \
 -b 40000
 
 30x30 Matrix (not symmetric): \
+ 
 python3 ScanChIPP.py -i ../example/30x30_data.txt -w 10 -m 120000 -b 40000
 
 Simulated Matrix (From CASPIAN): \
+ 
 python3 ScanChIPP.py -i ../example/40_TADlike_alpha_50_set0.mat -w 10 -m 120000 -b 40000
