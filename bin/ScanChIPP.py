@@ -9,8 +9,6 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 from sklearn.metrics import silhouette_score
-# from sklearn.metrics import davies_bouldin_score
-# from sklearn import datasets
 from jqmcvi import base
 import argparse
 from sklearn.cluster import KMeans
@@ -19,7 +17,6 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 mpl.rcParams['pdf.fonttype']=42
 mpl.rcParams['ps.fonttype']=42
-# %matplotlib inline
 
 def main():
     """
@@ -36,9 +33,6 @@ def main():
     
     data = submatrix(data, 0, 0, 100) # For testing purposes on simulated data from CASPIAN
     
-    # with open('100x100.txt', 'w') as outfile: # uncomment if using simulated matrix
-    #     np.savetxt(outfile, data)
-    
     window_length = len(data) // args.windowproportion
     
     print("Create features...")
@@ -47,12 +41,7 @@ def main():
     # Save features to a file
     with open('features2.txt', 'w') as outfile:
         np.savetxt(outfile, features)
-    
-    # # Use KNN to estimate eps @ the elbow point
-    # print("Plotting K-NearestNeighbor...")
-    # distances = knn(min_points, features=features)
-    # # This isn't working well
-    # print("Finding elbow point...")
+        
     eps = 29 #find_elbow_point(distances)
     
     print("Find best eps from elbow in range of 10 and cluster...")
@@ -87,92 +76,6 @@ def create_feature_data(matrix, window_length):
     Returns:
         array: Features, N_features = (2 * window_length) * len(matrix)
     """
-    # Cross Features
-    # features = []
-
-    # for diag in range(0, len(matrix)):
-    #     feat = []
-    #     # Finds end position of window
-    #     window = window_length // 2
-        
-    # # Collect row and column features
-    #     # Top-left corner
-    #     if (diag - window) < 0:
-    #         for j in range(0, window_length):
-    #             # row
-    #             feat.append(matrix[diag, j])
-    #         for i in range(0, window_length):
-    #             # col
-    #             feat.append(matrix[i, diag])
-    #     # Bottom-right corner
-    #     elif (diag + window) > len(matrix):
-    #         for j in range(len(matrix) - window_length, len(matrix)):
-    #             feat.append(matrix[diag, j])
-    #         for i in range(len(matrix) - window_length, len(matrix)):
-    #             feat.append(matrix[i, diag])
-    #     # Full cross, and window length is an even nubmer
-    #     elif window_length % 2 == 0:   
-    #         for j in range(diag - window, diag + window): 
-    #             # rows
-    #             feat.append(matrix[diag, j])
-    #         for i in range(diag - window, diag + window):
-    #             # col
-    #             feat.append(matrix[i, diag])
-    #     # Window is not even and in bottom-right corner
-    #     elif diag > (len(matrix) - window_length):
-    #         for j in range((diag - window) - 1, diag + window): 
-    #             # rows
-    #             feat.append(matrix[diag, j])
-    #         for i in range((diag - window) - 1, diag + window):
-    #             # col
-    #             feat.append(matrix[i, diag])
-    #     # Window is not even and in top-left corner
-    #     else:
-    #         for j in range(diag - window, (diag + window) + 1): 
-    #             # rows
-    #             feat.append(matrix[diag, j])
-    #         for i in range(diag - window, (diag + window) + 1):
-    #             # col
-    #             feat.append(matrix[i, diag])
-                
-    #     # Add the feature to the set of features            
-    #     features.append(feat)
-        
-    # # print(features)
-    # # features = np.array(features, dtype=float)
-    # print(features)
-    # return features
-
-    # Square Features
-    # features = []
-    # for diag in range(0, len(matrix)):
-    #     feat = []
-    #     # Finds end position of window
-    #     window = window_length + diag
-        
-    # # Collect row and column features
-
-    #     # If window is out of bounds
-    #     if (window > len(matrix)):
-    #         for i in range(0, window_length): 
-    #             # rows
-    #             for j in range(0, window_length):
-    #                 # col
-    #                 feat.append(matrix[diag - i, diag - j])
-    #     else:   
-    #         for i in range(diag, window): 
-    #             # rows
-    #             for j in range(diag, window):
-    #                 # col
-    #                 feat.append(matrix[i, j])
-    #     # Add the feature to the set of features    
-    #     features.append(feat)
-    
-    # features = np.array(features, dtype=float)
-    
-    # return features
-    
-    # ClusterTAD Features
     features = []
     n = 0
 
@@ -281,7 +184,6 @@ def cluster_ranges(eps, features):
         
         # Cluster TADs
         clusters = DBSCAN(eps=e, min_samples=3).fit(features)
-        # clusters = KMeans(n_clusters=e, random_state=0, n_init="auto").fit(features)
         
         # Count the number of different labels
         labels = clusters.labels_
@@ -289,10 +191,6 @@ def cluster_ranges(eps, features):
         n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
         n_noise_ = list(labels).count(-1)
 
-        # print("Estimated number of clusters: %d" % n_clusters_)
-        # print("Estimated number of noise points: %d" % n_noise_)
-        # print(clusters.labels_)
-            
         if n_clusters_ <= 1:
             continue
             
@@ -305,10 +203,6 @@ def cluster_ranges(eps, features):
             best_file = filename
             best_cluster = clusters.labels_
         print("Silhouette Score(n=3): ", s_s)
-            
-        #save to file
-        # with open(filename, 'w') as outfile:
-        #     np.savetxt(outfile, labels)
                 
     print("The best file was ", best_file, "with a Silhouette Score of ", best_score_s)
     print(best_cluster)
