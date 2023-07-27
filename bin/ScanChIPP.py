@@ -7,15 +7,18 @@ from sklearn.cluster import DBSCAN
 from sklearn.neighbors import NearestNeighbors
 import pandas as pd
 import numpy as np
-# import seaborn as sns
+import seaborn as sns
 from sklearn.metrics import silhouette_score
-from sklearn.metrics import davies_bouldin_score
-from sklearn import datasets
+# from sklearn.metrics import davies_bouldin_score
+# from sklearn import datasets
 from jqmcvi import base
 import argparse
 from sklearn.cluster import KMeans
 import os
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+mpl.rcParams['pdf.fonttype']=42
+mpl.rcParams['ps.fonttype']=42
 # %matplotlib inline
 
 def main():
@@ -23,69 +26,51 @@ def main():
     Read inputs and creates output TADs
     """
     
-    # Setup parser
     parser = setup_parser()
     args = parse_arguments(parser)
     
     min_points = min_pnts(args.minsize, args.binsize)
     
-    # read HP contact matrix
     print("Read data...")
     data = pd.read_csv(args.input, header=None, sep='\t') # remove headers as needed
-    data = data.to_numpy()
+    
+    data = submatrix(data, 0, 0, 100) # For testing purposes on simulated data from CASPIAN
+    
+    # with open('100x100.txt', 'w') as outfile: # uncomment if using simulated matrix
+    #     np.savetxt(outfile, data)
     
     window_length = len(data) // args.windowproportion
-    # Create feature data from contact matrix with specified window size
+    
     print("Create features...")
     features = create_feature_data(data, window_length)
+    
     # Save features to a file
     with open('features2.txt', 'w') as outfile:
         np.savetxt(outfile, features)
     
-    # Use KNN to estimate eps @ the elbow point
-    print("Plotting K-NearestNeighbor...")
-    distances = knn(min_points, features=features)
+    # # Use KNN to estimate eps @ the elbow point
+    # print("Plotting K-NearestNeighbor...")
+    # distances = knn(min_points, features=features)
+    # # This isn't working well
+    # print("Finding elbow point...")
+    eps = 29 #find_elbow_point(distances)
     
-    print("Finding elbow point...")
-    eps = find_elbow_point(distances) # 29
-    
-    print("Find best eps from elbow in range of 10...")
-    min_points = min_pnts(args.minsize, args.binsize)
+    print("Find best eps from elbow in range of 10 and cluster...")
+    # min_points = min_pnts(args.minsize, args.binsize)
     best_clusters = cluster_ranges(eps=eps, features=features)
     
     tads = generate_tad(bin_size=args.binsize, tad_size=args.minsize, clusters=best_clusters)
     
     print(tads)
-    # parser = setup_parser()
-    # args = parse_arguments(parser)
+    tadFile = 'TADfile.txt'
     
-    # min_points = min_pnts(args.minsize, args.binsize)
+    tadQuality(tadFile=tadFile, data=data)
     
-    # # read HP contact matrix
-    # print("Read data")
-    # data = pd.read_csv(args.input, header=None, sep='\t')
-    # data = data.to_numpy()
-    # # print(data[1, :])
-    
-    # window_length = len(data) // args.windowproportion
-    # # Create feature data from contact matrix with specified window size
-    # print("Create features")
-    # features = create_feature_data(data, window_length)
-    # #print to file
-    # with open('features.txt', 'w') as outfile:
-    #     np.savetxt(outfile, features)
-    
-    # print("Plotting K-NearestNeighbor...")
-    # distances = knn(min_points, features=features)
-    
-    # print("Finding elbow point...")
-    # eps = find_elbow_point(distances)
-    # print("eps", eps)
+    create_heatmap(hic=data, tadfile=tadFile)
 
-    # # Cluster TADs
-    # print("Make clusters")
-    # clusters = DBSCAN(eps=eps, min_samples=min_pnts(args.minsize, args.binsize)).fit(features)
-    # print(clusters.labels_)
+def submatrix( matrix, startRow, startCol, size):
+    x = np.array(matrix)
+    return x[startRow:startRow+size,startCol:startCol+size]
 
 #######################################
 #          Feature Extraction         #
@@ -102,88 +87,64 @@ def create_feature_data(matrix, window_length):
     Returns:
         array: Features, N_features = (2 * window_length) * len(matrix)
     """
-    
+    # Cross Features
     # features = []
 
     # for diag in range(0, len(matrix)):
     #     feat = []
     #     # Finds end position of window
-    #     window = window_length + diag
+    #     window = window_length // 2
         
-    # # Collect row and column features 
-    #     for j in range(0, len(matrix)): 
-    #         # rows
-    #         feat.append(matrix[diag, j])
-    #     for i in range(0, len(matrix)):
-    #          # col
-    #         feat.append(matrix[i, diag])
+    # # Collect row and column features
+    #     # Top-left corner
+    #     if (diag - window) < 0:
+    #         for j in range(0, window_length):
+    #             # row
+    #             feat.append(matrix[diag, j])
+    #         for i in range(0, window_length):
+    #             # col
+    #             feat.append(matrix[i, diag])
+    #     # Bottom-right corner
+    #     elif (diag + window) > len(matrix):
+    #         for j in range(len(matrix) - window_length, len(matrix)):
+    #             feat.append(matrix[diag, j])
+    #         for i in range(len(matrix) - window_length, len(matrix)):
+    #             feat.append(matrix[i, diag])
+    #     # Full cross, and window length is an even nubmer
+    #     elif window_length % 2 == 0:   
+    #         for j in range(diag - window, diag + window): 
+    #             # rows
+    #             feat.append(matrix[diag, j])
+    #         for i in range(diag - window, diag + window):
+    #             # col
+    #             feat.append(matrix[i, diag])
+    #     # Window is not even and in bottom-right corner
+    #     elif diag > (len(matrix) - window_length):
+    #         for j in range((diag - window) - 1, diag + window): 
+    #             # rows
+    #             feat.append(matrix[diag, j])
+    #         for i in range((diag - window) - 1, diag + window):
+    #             # col
+    #             feat.append(matrix[i, diag])
+    #     # Window is not even and in top-left corner
+    #     else:
+    #         for j in range(diag - window, (diag + window) + 1): 
+    #             # rows
+    #             feat.append(matrix[diag, j])
+    #         for i in range(diag - window, (diag + window) + 1):
+    #             # col
+    #             feat.append(matrix[i, diag])
                 
     #     # Add the feature to the set of features            
     #     features.append(feat)
         
     # # print(features)
-    # features = np.array(features, dtype=float)
-    
+    # # features = np.array(features, dtype=float)
     # print(features)
     # return features
-    
-    features = []
 
-    for diag in range(0, len(matrix)):
-        feat = []
-        # Finds end position of window
-        window = window_length // 2
-        
-    # Collect row and column features
-        # Top-left corner
-        if (diag - window) < 0:
-            for j in range(0, window_length):
-                # row
-                feat.append(matrix[diag, j])
-            for i in range(0, window_length):
-                # col
-                feat.append(matrix[i, diag])
-        # Bottom-right corner
-        elif (diag + window) > len(matrix):
-            for j in range(len(matrix) - window_length, len(matrix)):
-                feat.append(matrix[diag, j])
-            for i in range(len(matrix) - window_length, len(matrix)):
-                feat.append(matrix[i, diag])
-        # Full cross, and window length is an even nubmer
-        elif window_length % 2 == 0:   
-            for j in range(diag - window, diag + window): 
-                # rows
-                feat.append(matrix[diag, j])
-            for i in range(diag - window, diag + window):
-                # col
-                feat.append(matrix[i, diag])
-        # Window is not even and in bottom-right corner
-        elif diag > (len(matrix) - window_length):
-            for j in range((diag - window) - 1, diag + window): 
-                # rows
-                feat.append(matrix[diag, j])
-            for i in range((diag - window) - 1, diag + window):
-                # col
-                feat.append(matrix[i, diag])
-        # Window is not even and in top-left corner
-        else:
-            for j in range(diag - window, (diag + window) + 1): 
-                # rows
-                feat.append(matrix[diag, j])
-            for i in range(diag - window, (diag + window) + 1):
-                # col
-                feat.append(matrix[i, diag])
-                
-        # Add the feature to the set of features            
-        features.append(feat)
-        
-    # print(features)
-    # features = np.array(features, dtype=float)
-    print(features)
-    return features
-    
+    # Square Features
     # features = []
-
     # for diag in range(0, len(matrix)):
     #     feat = []
     #     # Finds end position of window
@@ -210,43 +171,45 @@ def create_feature_data(matrix, window_length):
     # features = np.array(features, dtype=float)
     
     # return features
+    
+    # ClusterTAD Features
+    features = []
+    n = 0
 
+    for diag in range(0, len(matrix)):
+        feat = []
+        # Finds end position of window
+        window = window_length + diag
+        
+    # Collect row and column features 
+        if diag > len(matrix) / 2:
+            for j in range(n, len(matrix)): 
+            # rows
+                feat.append(matrix[diag, j])
+            for i in range(n, len(matrix)):
+            #      # col
+                feat.append(matrix[i, diag])
+        else:
+            for j in range(0, len(matrix) - n): 
+                # rows
+                feat.append(matrix[diag, j])
+            for i in range(0, len(matrix) - n):
+            #      # col
+                feat.append(matrix[i, diag])
+                
+        # Add the feature to the set of features            
+        features.append(feat)
+        
+    # print(features)
+    features = np.array(features, dtype=float)
+    
+    print(features)
+    return features
 
 #######################################
 #          DBScan Clustering          #
 #######################################
 
-# def k_distance(features, window_length):
-#     """
-#     Calculate the k-distance for each window in the given features.
-
-#     Args:
-#         features (array): Features obtained from create_feature_data function.
-#         k (int): The desired distance (k) to calculate.
-
-#     Returns:
-#         array: The k-distances for each window.
-#     """
-#     num_windows = len(features) // (2 * window_length)
-#     k_distances = []
-
-#     for window_idx in range(num_windows):
-#         start_idx = window_idx * 2 * window_length
-#         end_idx = start_idx + 2 * window_length
-#         window_data = features[start_idx:end_idx]
-#         distance = np.linalg.norm(np.array(window_data[:-1]) - np.array(window_data[1:]))
-#         k_distances.append(distance)
-    
-#     return find_elbow_point(k_distances)
-
-# def knn(minsize, binsize, features):
-#     neighbors = NearestNeighbors(n_neighbors=min_pnts(minsize, binsize))
-#     neighbors_fit = neighbors.fit(features)
-#     distances, indices = neighbors_fit.kneighbors(features)
-#     distances = np.sort(distances, axis=0)
-#     distances = distances[:,1]
-#     plt.plot(distances) 
-#     plt.savefig('KNN.png')
 def knn(min_pnts, features):
     """Calculate K-NearestNeighbor
 
@@ -285,6 +248,7 @@ def find_elbow_point(k_distances):
 
     # Find the index of the elbow point where the slope starts to decrease significantly
     elbow_point_index = distortions.index(max(distortions))
+    print(elbow_point_index)
     return elbow_point_index + 1  # Add 1 to get the actual k value for the elbow point
 
 def min_pnts(min_tad_size, resolution):
@@ -313,40 +277,42 @@ def cluster_ranges(eps, features):
     best_file = ""
     best_file_dunn = ""
     best_cluster = []
-    for e in range(eps-5, eps+30):
-        for min in range(2, 10):
-            # Cluster TADs
-            # print("Clustering at eps=",e , " and min_points=", min, "...")
-            clusters = DBSCAN(eps=44, min_samples=min).fit(features)
-            # clusters = KMeans(n_clusters=4, random_state=0, n_init="auto").fit(features)
-            # Count the number of different labels
-            labels = clusters.labels_
-            n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
-            n_noise_ = list(labels).count(-1)
+    for e in range(1, eps+100):
+        
+        # Cluster TADs
+        clusters = DBSCAN(eps=e, min_samples=3).fit(features)
+        # clusters = KMeans(n_clusters=e, random_state=0, n_init="auto").fit(features)
+        
+        # Count the number of different labels
+        labels = clusters.labels_
+        print(labels)
+        n_clusters_ = len(set(labels)) - (1 if -1 in labels else 0)
+        n_noise_ = list(labels).count(-1)
 
-            # print("Estimated number of clusters: %d" % n_clusters_)
-            # print("Estimated number of noise points: %d" % n_noise_)
-            # print(clusters.labels_)
+        # print("Estimated number of clusters: %d" % n_clusters_)
+        # print("Estimated number of noise points: %d" % n_noise_)
+        # print(clusters.labels_)
             
-            if n_clusters_ <= 1:
-                continue
+        if n_clusters_ <= 1:
+            continue
             
-            filename = f"cluster_eps.{e}._minpoints.{min}..txt"
+        filename = f"cluster_eps{e}_minpoints_2.txt"
             
-            # Silhouette Score
-            s_s = silhouette_score(features, labels)
-            if s_s > best_score_s:
-                best_score_s = s_s
-                best_file = filename
-                best_cluster = clusters.labels_
-            # print("Silhouette Score(n=3): ", s_s)
+        # Silhouette Score
+        s_s = silhouette_score(features, labels)
+        if s_s > best_score_s:
+            best_score_s = s_s
+            best_file = filename
+            best_cluster = clusters.labels_
+        print("Silhouette Score(n=3): ", s_s)
             
-            #save to file
-            with open(filename, 'w') as outfile:
-                np.savetxt(outfile, labels)
+        #save to file
+        # with open(filename, 'w') as outfile:
+        #     np.savetxt(outfile, labels)
                 
     print("The best file was ", best_file, "with a Silhouette Score of ", best_score_s)
     print(best_cluster)
+    
     return best_cluster
 
 #######################################
@@ -357,83 +323,127 @@ def generate_tad(bin_size, tad_size, clusters):
     """
     Generate TADs based on how many bins are required for the minimum size of a TAD
     """
-    return
+    
+    count = 0
+    start = None
+    tad_count = 0
+    previous = None
+    tads = []
+    
+    for label in clusters:
+        if count >= len(clusters) - 1:
+            if tad_count > min_pnts(tad_size, bin_size):
+                tads.append([start, count])
+        elif previous is None:
+            previous = label
+            start = count
+        elif previous != label:
+            if tad_count > min_pnts(tad_size, bin_size):
+                tads.append([start, count - 1])
+            start = count
+            tad_count = 1
+        else:
+            tad_count += 1
+        previous = label
+        count +=1
+        
+    with open('TADfile.txt', 'w') as outfile:
+        np.savetxt(outfile, tads)
+            
+    return tads
     
 
 #######################################
 #        Evaluate TAD Quality         #
+#        Adapted from CASPIAN         #
 #######################################
 
-def measure_of_concordance(tad_1, tad_2):
-    """
-    Computes the Measure of Concordance (MoC) between two sets of TAD regions.
+def tadQuality(tadFile, data):
+    """TAD quality"""
+    n = len(data)
+    tad = np.loadtxt(tadFile, dtype=int)
+    num_tads = len(tad)
 
-    Parameters:
-    tad_1 (list): The first set of TAD regions.
-    tad_2 (list): The second set of TAD regions.
+    intra = 0
+    intra_num = 0
+    for i in range(num_tads):
+        for j in range(int(tad[i, 0]), int(tad[i, 1] + 1)):
+            for k in range(int(tad[i, 0]), int(tad[i, 1] + 1)):
+                intra += data[j, k]
+                intra_num += 1
 
-    Returns:
-    float: The Measure of Concordance (MoC) between A and B.
-    """
-    n_tad_1 = len(tad_1)
-    n_tad_2 = len(tad_2)
+    if intra_num != 0:
+        intra = intra / intra_num
+        print("intra TAD: %0.3f" % intra)
+    else:
+        intra = 0
 
-    sum_term = 0
+    inter = 0
+    inter_num = 0
+    for i in range(num_tads - 1):
+        for j in range(int(tad[i, 0]), int(tad[i, 1] + 1)):
+            for k in range(int(tad[i + 1, 0]), int(tad[i + 1, 1] + 1)):
+                inter += data[j, k]
+                inter_num += 1
 
-    for i in range(n_tad_1):
-        for j in range(n_tad_2):
-            common_bins = len(set(tad_1[i]) & set(B[j]))
-            sum_term += (common_bins ** 2) / (len(tad_1[i]) * len(tad_2[j]) - 1)
+    if inter_num != 0:
+        inter = inter / inter_num
+        print("inter TAD: %0.3f" % inter)
+    else:
+        inter = 0
 
-    moc = (1 / (n_tad_1 * n_tad_2 - 1)) * sum_term
-    return moc
+    print("quality: %0.3f" % (intra - inter))
+    quality = (intra - inter) / num_tads
+    print(quality)
+    
+    return quality
 
+#######################################
+#       Create Heatmap of TADs        #
+#######################################
+def readTAD(tadfile):
+    f = open(tadfile)
+    line=f.readline()
+    start=[]
+    end=[]
+    while line:
+        line = line.split()
+        try:
+            start1 = int(float(line[0]))
+        except:
+            start1 = 0
+        end1 = int(float(line[1]))
+        start.append(start1)
+        end.append(end1)
+        line = f.readline()
+    f.close()
+    return start, end
 
-def modified_jaccard_index(tad_1, tad_2):
-    """
-    Computes the modified Jaccard's index between two sets of TAD boundaries.
+def create_heatmap(hic, tadfile):
+    
+    # Metric list for TAD identification
+    metricList = []
 
-    Parameters:
-    tad_1 (set): The first set of TAD boundaries.
-    tad_2 (set): The second set of TAD boundaries.
+    # Read TAD boundaries using the readTAD function
+    start, end = readTAD(tadfile)
+    print("Length of TADs", len(start))
+    lentad = len(start)
+    tad_label = start + end
+    tad_label.sort()
 
-    Returns:
-    float: The modified Jaccard's index between A and B.
-    """
-    intersecting_set = set()
-    double_counted_boundaries = set()
-
-    for boundary in tad_1:
-        for offset in range(-1, 2):
-            shifted_boundary = boundary + offset
-            if shifted_boundary in tad_2:
-                if shifted_boundary not in double_counted_boundaries:
-                    intersecting_set.add(shifted_boundary)
-                    double_counted_boundaries.add(shifted_boundary)
-
-    union_size = len(tad_1) + len(tad_2) - len(intersecting_set)
-    jaccard_index = len(intersecting_set) / union_size if union_size != 0 else 0
-
-    return jaccard_index
-
-
-def length_quality():
-    """
-    Find the quality of the TAD predictions based on length of the TADs
-    """
-    return
-
-def amount_identified_quality():
-    """
-    Find the quality of the TAD predictions based on the number of identified TAD's
-    """
-    return
-
-def interaction_quality():
-    """
-    Intra- and inter- Cluster (TAD) similarity
-    """
-    return
+    # Plot the Hi-C matrix heatmap and highlight TAD boundaries
+    palette = sns.color_palette("bright", 10)
+    plt.figure(figsize=(10.5, 10))
+    start1 = 140
+    end1 = 250
+    sns.heatmap(data=hic[start1:end1, start1:end1], robust=True, cmap="OrRd")
+    for i in range(0, lentad):
+        if start1 < start[i] < end1 and start1 < end[i] < end1:
+            plt.hlines(y=start[i] - start1, xmin=start[i] - start1, xmax=end[i] - start1)
+            plt.vlines(x=end[i] - start1, ymin=start[i] - start1, ymax=end[i] - start1)
+    plt.title('TAD boundary')
+    plt.savefig('../example/{}_{}_{}.pdf'.format(start1, end1), format='pdf', bbox_inches='tight')
+    plt.show()
 
 #######################################
 #            Set Up Parser            #
@@ -455,6 +465,8 @@ def parse_arguments(parser):
     return args
 
 main()
+
+
 
 
 
