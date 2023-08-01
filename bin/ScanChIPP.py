@@ -150,6 +150,34 @@ def create_feature_data(matrix, window_length, windowproportion):
     print(features)
     return features
 
+    # L-Shaped Features
+    # features = []
+    # for diag in range(0, len(matrix)):
+
+    #      # Finds end position of window
+    #     window = window_length + diag
+
+    #  # Collect row and column features
+
+    #      # If window is out of bounds
+    #     if (window > len(matrix)):
+
+    #          # row
+    #         for j in range(0, window_length):
+    #              features.append(matrix[diag, diag - j])
+    #         # col
+    #         for i in range(0, window_length):
+    #             features.append(matrix[diag - i, diag])
+    #     else:   
+    #         for j in range(diag, window): 
+    #             # rows
+    #             features.append(matrix[diag, j])
+    #         for i in range(diag, window):
+    #              # col
+    #              features.append(matrix[i, diag])
+
+    # return features
+
     # Square Features
     # features = []
     # for diag in range(0, len(matrix)):
